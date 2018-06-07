@@ -14,15 +14,15 @@ shinyUI(fluidPage(
   
   # Application title
   titlePanel("Financial Data"),
-  
-  # Sidebar with a slider input for number of bins 
+
+  # Textinput selector for the symbol 
   sidebarLayout(
     sidebarPanel(
       textInput(inputId = "symInp", label = "Symbol", value = ""),
       actionButton("update_button", "Update chart")
     ),
     
-    # Show a plot of the generated distribution
+    # Plots of raw and smoothed data
     mainPanel(
        plotOutput("pricePlot"),
        plotOutput("smoothPlot")
