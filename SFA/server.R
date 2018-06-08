@@ -120,6 +120,14 @@ shinyServer(function(input, output) {
           plot(wTran, pch = ".")
         }
       })
+      
+      output$retPlot <- renderPlot({
+        retSer <- runRets(sym)
+        if(!is.null(retSer)){
+          plot(retSer, pch = ".")
+        }
+      })
+      
   })
   
   loadData <- function() {
@@ -133,7 +141,6 @@ shinyServer(function(input, output) {
     if(!is.null(ts)){
       plot(ts, pch = ".")
     }
-
   })
   
   output$smoothPlot <- renderPlot({
@@ -141,7 +148,13 @@ shinyServer(function(input, output) {
     if(!is.null(wTran)){
       plot(wTran, pch = ".")
     }
-    
+  })
+  
+  output$retPlot <- renderPlot({
+    retSer <- runRets("BNS")
+    if(!is.null(retSer)){
+      plot(retSer, pch = ".")
+    }
   })
   
    

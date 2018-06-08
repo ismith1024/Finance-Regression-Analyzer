@@ -25,7 +25,8 @@ shinyUI(fluidPage(
     # Plots of raw and smoothed data
     mainPanel(
        plotOutput("pricePlot"),
-       plotOutput("smoothPlot")
+       plotOutput("smoothPlot"),
+       plotOutput("retPlot")
     )
   )
 ))
