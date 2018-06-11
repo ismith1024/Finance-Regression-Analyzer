@@ -26,7 +26,9 @@ shinyUI(fluidPage(
     mainPanel(
        plotOutput("pricePlot"),
        plotOutput("smoothPlot"),
-       plotOutput("retPlot")
+       plotOutput("retPlot"),
+       plotOutput("pePlot"),
+       plotOutput("divPlot")
     )
   )
 ))

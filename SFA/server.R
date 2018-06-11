@@ -84,6 +84,61 @@ runTrans <- function(symb){
   return(wTrans)
 }
 
+getIntegrated <- function(symb){
+  sqlQuery <- paste("SELECT DISTINCT day_, month_, year_, close, eps, div FROM (SELECT day_, month_, year_ FROM xtse WHERE symbol = '", symb, "' UNION all SELECT 15 as day_, month_, year_ FROM earnings WHERE symbol = '", symb, "') LEFT JOIN( SELECT 15 as day2, month_ as month2, year_ as year2, div, eps FROM earnings WHERE symbol = '", symb, "') ON day_ = day2 AND month_ = month2 AND year_ = year2 LEFT JOIN ( SELECT day_ as day3, month_ as month3, year_ as year3, close FROM xtse WHERE symbol = '", symb, "') ON day_ = day3 AND month_ = month3 AND year_ = year3 ORDER BY year_, month_, day_;", sep = "")
+  print(sqlQuery)
+  rs <- dbSendQuery(db, sqlQuery) 
+  
+  while (!dbHasCompleted(rs)) {
+    values <- dbFetch(rs)
+    print(dbFetch(rs))
+  }
+  
+  ret <- values
+  
+  #counts the number of valid data points we have for earnings
+  earnsCount <- 0
+  
+  #track the last four eps and div
+  earns <- c(0,0,0,0)
+  divs <- c(0,0,0,0)
+  anEPS <- 0.0
+  anDiv <- 0.0
+  
+  for(i in 1:nrow(ret)){
+    if(!is.na(ret[[i, "eps"]])){
+      earnsCount <- earnsCount + 1
+      earns[1] <- earns[2]
+      earns[2] <- earns[3]
+      earns[3] <- earns[4]
+      earns[4] <- ret[i, "eps"]
+      anEPS <- earns[1] + earns[2] + earns[3] + earns[4]
+      
+      divs[1] <- divs[2]
+      divs[2] <- divs[3]
+      divs[3] <- divs[4]
+      divs[4] <- ret[i, "div"]
+      anDiv <- divs[1] + divs[2] + divs[3] + divs[4]
+      
+      #print(paste("EPS: ", anEPS, " Div: ", anDiv, sep = ""))
+    }
+    
+    if(!is.na(ret[i, "close"]) && earnsCount >= 4){
+      ret[i, "p-e"] <- ret[i, "close"] / anEPS
+      ret[i, "divYld"] <- 100 * anDiv / ret[i, "close"] 
+    }
+  }
+  
+  return(ret)
+  
+}
+
+runInt <- function(symb){
+  intData <- getIntegrated(symb)
+  intData
+}
+
+
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
   
@@ -98,12 +153,16 @@ shinyServer(function(input, output) {
     #update data
     print(paste("New symbol ", input$symInp))
     sym <- input$symInp
-      print(paste("New symbol ", sym))
-      output$pricePlot <- renderPlot({
-        ts <- runTS(sym)
+    dataSer <- runInt(sym)
+    print(paste("New symbol ", sym))
+    output$pricePlot <- renderPlot({
+      dataSer <- getIntegrated(sym)
+      
+        #ts <- runTS(sym)
         #get the time series
-        input$update_button
-        
+        #input$update_button
+        ts <- dataSer[["close"]]
+      
         # draw the raw data series
         if(!is.null(ts)){
           plot(ts, pch = ".")
@@ -128,6 +187,18 @@ shinyServer(function(input, output) {
         }
       })
       
+      output$divPlot <- renderPlot({
+        if(!is.null(dataSer[["divYld"]])){
+          plot(dataSer[["divYld"]], pch = ".")
+        }
+      })
+      
+      output$pePlot <- renderPlot({
+        if(!is.null(dataSer[["p-e"]])){
+          plot(dataSer[["p-e"]], pch = ".")
+        }
+      })
+      
   })
   
   loadData <- function() {
@@ -135,6 +206,8 @@ shinyServer(function(input, output) {
       input$symInp
     }
   }
+  
+  dataSer <- getIntegrated("BNS")
   
   output$pricePlot <- renderPlot({
     ts <- runTS("BNS")
@@ -154,6 +227,18 @@ shinyServer(function(input, output) {
     retSer <- runRets("BNS")
     if(!is.null(retSer)){
       plot(retSer, pch = ".")
+    }
+  })
+  
+  output$divPlot <- renderPlot({
+    if(!is.null(dataSer[["divYld"]])){
+      plot(dataSer[["divYld"]], pch = ".")
+    }
+  })
+  
+  output$pePlot <- renderPlot({
+    if(!is.null(dataSer[["p-e"]])){
+      plot(dataSer[["p-e"]], pch = ".")
     }
   })
   
