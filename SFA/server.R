@@ -64,7 +64,7 @@ runRets <- function(symb){
   
   print(today)
   plot(rets, pch = ".")
-  
+
 }
 
 runTS <- function(symb){
@@ -124,10 +124,17 @@ getIntegrated <- function(symb){
     }
     
     if(!is.na(ret[i, "close"]) && earnsCount >= 4){
-      ret[i, "p-e"] <- ret[i, "close"] / anEPS
+      ret[i, "pe"] <- ret[i, "close"] / anEPS
       ret[i, "divYld"] <- 100 * anDiv / ret[i, "close"] 
     }
   }
+
+  #summary(dv.mod1)
+  dv.mod1 <- lm(divYld ~ pe, data = ret)
+  plot(ret$divYld, ret$pe, main = paste("Demo Regression: ", symb, sep = ""), xlab = "Dividend Yield", ylab = "P-E")
+  
+  abline(dv.mod1)
+  
   
   return(ret)
   
@@ -194,8 +201,8 @@ shinyServer(function(input, output) {
       })
       
       output$pePlot <- renderPlot({
-        if(!is.null(dataSer[["p-e"]])){
-          plot(dataSer[["p-e"]], pch = ".")
+        if(!is.null(dataSer[["pe"]])){
+          plot(dataSer[["pe"]], pch = ".")
         }
       })
       
@@ -237,12 +244,13 @@ shinyServer(function(input, output) {
   })
   
   output$pePlot <- renderPlot({
-    if(!is.null(dataSer[["p-e"]])){
-      plot(dataSer[["p-e"]], pch = ".")
+    if(!is.null(dataSer[["pe"]])){
+      plot(dataSer[["pe"]], pch = ".")
     }
   })
   
    
 })
+
 
 
