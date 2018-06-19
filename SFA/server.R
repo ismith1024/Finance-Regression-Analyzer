@@ -26,7 +26,7 @@ getAll <- function(symb){
   
   while (!dbHasCompleted(rs)) {
     values <- dbFetch(rs)
-    print(dbFetch(rs))
+    #print(dbFetch(rs))
   }
   
   ret <- values
@@ -44,11 +44,6 @@ getAll <- function(symb){
   #kern <- c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
   #ret[["wTrans"]] <- convolve(ret[["close"]], kern, type = "filter")
   
-  fYear <- today[["year_"]]
-  fMon <- today[["month_"]]
-  fDay <- today[["day_"]]
-  fVal <- tail(ret[["wTrans"]],1)
-    
   for(i in 1:nrow(ret)){
 
     if(!is.na(ret[[i, "eps"]])){
@@ -82,25 +77,39 @@ getAll <- function(symb){
     }
   }
   
-  #print(ret)
-  
   #Close only
   sqlQuery2 <- paste("SELECT day_, month_, year_, close, 0 as wTran, 0 as ann, 0 as eps, 0 as div FROM xtse WHERE symbol = '", symb, "';", sep = "")
   rs2 <- dbSendQuery(db, sqlQuery2) 
   while (!dbHasCompleted(rs2)) {
-    x <- dbFetch(rs2)
+    finalVals <- dbFetch(rs2)
   }
+  
+  today <- tail(ret, 1)
   
   #fill in the annualized, p-e, and div from the sparse data
   j <- 0
   for(i in 1:nrow(ret)){
     if(!(is.na(ret[[i, "close"]]))){
-      x[j, "ann"] <- ret[i, "annualized"]
-      x[j, "pe"] <- ret[i, "pe"]
-      x[j, "div"] <- ret[i, "divYld"]
+      #finalVals[j, "ann"] <- ret[i, "annualized"]  
+      fYear <- today[["year_"]]
+      fMon <- today[["month_"]]
+      fDay <- today[["day_"]]
+      fVal <- tail(ret[["close"]],1)
+      
+      finalVals[j, "pe"] <- ret[i, "pe"]
+      finalVals[j, "div"] <- ret[i, "divYld"]
       j <- j + 1
+    
+      iYear <- finalVals[j, "year_"]
+      iMon <- finalVals[j, "month_"]
+      iDay <- finalVals[j, "day_"]
+      iVal <- finalVals[j, "close"]
+      finalVals[j, "ann"] <- getAnnualizedReturn(iDay, iMon, iYear, iVal, fDay, fMon, fYear, fVal)
     }
+  
   }
+  
+  print(finalVals)
 
   #TODO: this is still a mess
   #need to put the filtered time series into the middle of the data frame
@@ -108,27 +117,25 @@ getAll <- function(symb){
   #generate the kernel from here for now:
   #http://dev.theomader.com/gaussian-kernel-calculator/
   
-  kern = c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
-  xx <- convolve(x[["close"]], kern, type = "filter")
-  
-  print("X:")
-  print(x)
-  print(nrow(x))
-  print(length(xx))
-  
+  #kern = c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
+  #wTran <- convolve(finlaVals[["close"]], kern, type = "filter")
+ 
   #populate the annualized return
   #x[[i, "annualized"]] <-getAnnualizedReturn(x[[i, "day_"]], x[[i, month_]], x[[i, year]], x[[i, "close"]], finalDay, finalMonth, finalYear, finalVal)
   
+
+  dv.mod1 <- lm(ann ~ pe, data = finalVals)
+  summary(dv.mod1)
+  plot(finalVals$pe, finalVals$ann, main = paste("P-E Regression: ", symb, sep = ""), xlab = "P-E", ylab = "Annualized Return")
+  abline(dv.mod1)
   
+
+  dv.mod2 <- lm(ann ~ div, data = finalVals)
+  summary(dv.mod2)
+  plot(finalVals$div, finalVals$ann, main = paste("Dividend Regression: ", symb, sep = ""), xlab = "Dividend Yield", ylab = "Annualized Return")
+  abline(dv.mod2)
   
-  #summary(dv.mod1)
-  #dv.mod1 <- lm(divYld ~ pe, data = ret)
-  #plot(ret$divYld, ret$pe, main = paste("Demo Regression: ", symb, sep = ""), xlab = "Dividend Yield", ylab = "P-E")
-  
-  #abline(dv.mod1)
-  
-  
-  return(ret)
+  return(finalVals)
 }
 
 
@@ -257,10 +264,10 @@ getIntegrated <- function(symb){
   }
 
   #summary(dv.mod1)
-  dv.mod1 <- lm(divYld ~ pe, data = ret)
-  plot(ret$divYld, ret$pe, main = paste("Demo Regression: ", symb, sep = ""), xlab = "Dividend Yield", ylab = "P-E")
+  #dv.mod1 <- lm(divYld ~ pe, data = ret)
+  #plot(ret$divYld, ret$pe, main = paste("Demo Regression: ", symb, sep = ""), xlab = "Dividend Yield", ylab = "P-E")
   
-  abline(dv.mod1)
+  #abline(dv.mod1)
   
   
   return(ret)
