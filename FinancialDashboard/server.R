@@ -89,7 +89,7 @@ getAll <- function(symb){
   today <- tail(ret, 1)
   
   #fill in the annualized, p-e, and div from the sparse data
-  j <- 0
+  j <- 1
   for(i in 1:nrow(ret)){
     if(!(is.na(ret[[i, "close"]]))){
       #finalVals[j, "ann"] <- ret[i, "annualized"]  
@@ -100,13 +100,14 @@ getAll <- function(symb){
       
       finalVals[j, "pe"] <- ret[i, "pe"]
       finalVals[j, "div"] <- ret[i, "divYld"]
-      j <- j + 1
+ 
       
       iYear <- finalVals[j, "year_"]
       iMon <- finalVals[j, "month_"]
       iDay <- finalVals[j, "day_"]
       iVal <- finalVals[j, "close"]
       finalVals[j, "ann"] <- getAnnualizedReturn(iDay, iMon, iYear, iVal, fDay, fMon, fYear, fVal)
+      j <- j + 1
     }
     
   }
@@ -149,7 +150,9 @@ runInt <- function(symb){
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
-  
+  peProj <- 0.0
+  divProj <- 0.0
+    
   print("Starting server")
 
   updateSymbol<-reactive({
@@ -159,10 +162,8 @@ shinyServer(function(input, output) {
       "BNS"
   })
   
+  #TODO: today's value must be passed to getAll() as a parameter (not used in calculating current value)
   observeEvent(input$update_button, {
-    peProj <- 0.0
-    divProj <- 0.0
-
     
     #update data
     print(paste("New symbol ", input$symInp))
@@ -184,16 +185,29 @@ shinyServer(function(input, output) {
         plot(ts, pch = ".")
       }
     })
+    currentVal <- 0.0
+    if(input$rb == "smooth"){
+      currentVal <<- wTran[nrow(wTran)]
+      print("Smooth selected")
+    } else if (input$rb == "force"){
+      currentVal <<- input$priceText
+      print(paste("Forced value selected - ", input$priceText, sep = ""))
+    } else {
+      currentVal <<- dataSer[[nrow(dataSer), "close"]] 
+      print("Last close selected")
+    }
+    todaysDiv <- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
+    todaysPE <- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
     
-    currentVal <- tail(wTran, x = 1)
-    todaysDiv <- tail(dataSer[["div"]], 1)
-    todaysPE <- tail(dataSer[["pe"]], 1)
+    print(paste("Today's div: ", todaysDiv, sep = ""))
+    print(paste("Today's pe: ", todaysPE, sep = ""))
+    print(paste("Today's price:", currentVal, sep = ""))
     
     output$smoothPlot <- renderPlot({
-      #get the smoothed time series
-      input$update_button
+      kern <- c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
+      wTran <- convolve(dataSer[["close"]], kern, type = "filter")
       
-      # draw the smoothed data plot
+      #wTran <- runTrans("BNS")
       if(!is.null(wTran)){
         plot(wTran, pch = ".")
       }
@@ -208,8 +222,8 @@ shinyServer(function(input, output) {
     
     output$divPlot <- renderPlot({
       if(!is.null(dataSer[["div"]])){
-        todaysDiv <- tail(dataSer[["div"]], 1)
-        todaysPE <- tail(dataSer[["pe"]], 1)
+        todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
+        todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
                 #plot(dataSer[["divYld"]], pch = ".")
         dv.mod2 <- lm(ann ~ div, data = dataSer)
         summary(dv.mod2)
@@ -220,23 +234,26 @@ shinyServer(function(input, output) {
 
     })
     
-    print(paste("PE PROJ: ", peProj, sep = ""))
+
     
     output$pePlot <- renderPlot({
       if(!is.null(dataSer[["pe"]])){
-        todaysDiv <- tail(dataSer[["div"]], 1)
-        todaysPE <- tail(dataSer[["pe"]], 1)
+        todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
+        todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
         #plot(dataSer[["pe"]], pch = ".")
         dv.mod1 <- lm(ann ~ pe, data = dataSer)
         summary(dv.mod1)
         plot(dataSer$pe, dataSer$ann, xlab = "P-E", ylab = "Annualized Return")
         abline(dv.mod1)
-        divProj <<- predict(dv.mod1, data.frame(pe = c(todaysPE)))
+        peProj <<- predict(dv.mod1, data.frame(pe = c(todaysPE)))
       }
     })
     
+    print(paste("Today's div: ", todaysDiv, sep = ""))
+    print(paste("Today's pe: ", todaysPE, sep = ""))
+    print(paste("PE PROJ: ", peProj, sep = ""))
     print(paste("DIV PROJ: ", divProj, sep = ""))
-    
+
     output$divProjBox <- renderValueBox({
       valueBox(
         divProj, "Dividend Projection", icon = icon("list"),
@@ -262,6 +279,13 @@ shinyServer(function(input, output) {
   
   dataSer <- getAll("BNS")
   
+  print(dataSer)
+  print(dataSer[nrow(dataSer) -1,])
+  print(dataSer[nrow(dataSer),])
+  
+  todaysDiv <- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
+  todaysPE <- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
+   
   output$pricePlot <- renderPlot({
 
     if(!is.null(dataSer)){
@@ -288,8 +312,8 @@ shinyServer(function(input, output) {
   
   output$divPlot <- renderPlot({
     if(!is.null(dataSer[["div"]])){
-      todaysDiv <- tail(dataSer[["div"]], 1)
-      todaysPE <- tail(dataSer[["pe"]], 1)
+      todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
+      todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
       #plot(dataSer[["divYld"]], pch = ".")
       dv.mod2 <- lm(ann ~ div, data = dataSer)
       summary(dv.mod2)
@@ -301,8 +325,8 @@ shinyServer(function(input, output) {
   })
   
   output$pePlot <- renderPlot({
-    todaysDiv <- tail(dataSer[["div"]], 1)
-    todaysPE <- tail(dataSer[["pe"]], 1)
+    todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
+    todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
     if(!is.null(dataSer[["pe"]])){
       #plot(dataSer[["pe"]], pch = ".")
       dv.mod1 <- lm(ann ~ pe, data = dataSer)
@@ -312,6 +336,11 @@ shinyServer(function(input, output) {
       peProj <<- predict(dv.mod1, data.frame(pe = c(todaysPE)))
     }
   })
+  
+  print(paste("Today's div: ", todaysDiv, sep = ""))
+  print(paste("Today's pe: ", todaysPE, sep = ""))
+  print(paste("DIV PROJ: ", divProj, sep = ""))
+  print(paste("PE PROJ: ", peProj, sep = ""))
   
   output$divProjBox <- renderValueBox({
     valueBox(

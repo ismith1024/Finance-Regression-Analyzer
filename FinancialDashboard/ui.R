@@ -69,11 +69,26 @@ frow4 <- fluidRow(
   ) 
 )
 
+sbrow <- fluidRow(
+  sidebarSearchForm(textId = "symInp", buttonId = "update_button", label = "Symbol"),
+  radioButtons("rb", "Current price:",
+             choiceNames = list(
+               "Last close",
+               "Smoothed data",
+               "Forced value:"
+             ),
+             choiceValues = list(
+               "last", "smooth", "force"
+             )),
+            numericInput("priceText", "Price", 45, min = 1, max = 100)#,
+            #verbatimTextOutput("value")
+)
+
 header <- dashboardHeader(title = "Financial Analysis")  
 #Sidebar content of the dashboard
 sidebar <- dashboardSidebar(
   sidebarMenu(
-    sidebarSearchForm(textId = "symInp", buttonId = "update_button", label = "Symbol")
+  sbrow
     #menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
     #menuItem("Visit-us", icon = icon("send",lib='glyphicon'), href = "https://www.salesforce.com")
     
