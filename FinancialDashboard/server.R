@@ -19,7 +19,7 @@ db <- dbConnect(SQLite(), dbname="~/Data/CADFinance.db")
 # annualized return
 # p-e
 # div yield
-getAll <- function(symb){
+getAll <- function(symb, smooth, force, close, curVal){
   print("GetAll()")
   
   sqlQuery <- paste("SELECT DISTINCT day_, month_, year_, close, 0 as wTran, 0 as annualized, eps, div FROM (SELECT day_, month_, year_ FROM xtse WHERE symbol = '", symb, "' UNION all SELECT 15 as day_, month_, year_ FROM earnings WHERE symbol = '", symb, "') LEFT JOIN( SELECT 15 as day2, month_ as month2, year_ as year2, div, eps FROM earnings WHERE symbol = '", symb, "') ON day_ = day2 AND month_ = month2 AND year_ = year2 LEFT JOIN ( SELECT day_ as day3, month_ as month3, year_ as year3, close FROM xtse WHERE symbol = '", symb, "') ON day_ = day3 AND month_ = month3 AND year_ = year3 ORDER BY year_, month_, day_;", sep = "")
@@ -43,8 +43,8 @@ getAll <- function(symb){
   anDiv <- 0.0
   
   #smooth the data series
-  #kern <- c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
-  #ret[["wTrans"]] <- convolve(ret[["close"]], kern, type = "filter")
+  kern <- c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
+  wTrans <- convolve(ret[["close"]], kern, type = "filter")
   
   for(i in 1:nrow(ret)){
     
@@ -98,6 +98,11 @@ getAll <- function(symb){
       fDay <- today[["day_"]]
       fVal <- tail(ret[["close"]],1)
       
+      if (force == TRUE) {
+        fVal <<- curVal
+      } else if (smooth == TRUE){
+        fVal <<- tail(wTrans, 1)
+      } 
       finalVals[j, "pe"] <- ret[i, "pe"]
       finalVals[j, "div"] <- ret[i, "divYld"]
  
@@ -168,7 +173,27 @@ shinyServer(function(input, output) {
     #update data
     print(paste("New symbol ", input$symInp))
     sym <- input$symInp
-    dataSer <- getAll(sym)
+    
+    currentVal <- 0.0
+    force <- FALSE
+    smooth <- FALSE
+    close <- FALSE
+    
+    if(input$rb == "smooth"){
+      #currentVal <<- wTran[nrow(wTran)]
+      smooth <- TRUE
+      print("Smooth selected")
+    } else if (input$rb == "force"){
+      #currentVal <<- input$priceText
+      force <- TRUE
+      print(paste("Forced value selected - ", input$priceText, sep = ""))
+    } else {
+      #currentVal <<- dataSer[[nrow(dataSer), "close"]] 
+      close <- TRUE
+      print("Last close selected")
+    }    
+    
+    dataSer <- getAll(sym, smooth, force, close, currentVal)
     kern = c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
     wTran <- convolve(dataSer[["close"]], kern, type = "filter")
     print(paste("New symbol ", sym))
@@ -185,17 +210,7 @@ shinyServer(function(input, output) {
         plot(ts, pch = ".")
       }
     })
-    currentVal <- 0.0
-    if(input$rb == "smooth"){
-      currentVal <<- wTran[nrow(wTran)]
-      print("Smooth selected")
-    } else if (input$rb == "force"){
-      currentVal <<- input$priceText
-      print(paste("Forced value selected - ", input$priceText, sep = ""))
-    } else {
-      currentVal <<- dataSer[[nrow(dataSer), "close"]] 
-      print("Last close selected")
-    }
+
     todaysDiv <- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
     todaysPE <- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
     
@@ -277,7 +292,7 @@ shinyServer(function(input, output) {
     }
   }
   
-  dataSer <- getAll("BNS")
+  dataSer <- getAll("BNS", FALSE, TRUE, FALSE, 0.0)
   
   print(dataSer)
   print(dataSer[nrow(dataSer) -1,])
@@ -352,7 +367,7 @@ shinyServer(function(input, output) {
   output$peProjBox <- renderValueBox({
     valueBox(
       peProj, "P-E Projection", icon = icon("list"),
-      color = "yellow"
+      color = "yellow" 
     )
   })
   
