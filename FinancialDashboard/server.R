@@ -21,18 +21,19 @@ db <- dbConnect(SQLite(), dbname="~/Data/CADFinance.db")
 # div yield
 getAll <- function(symb, smooth, force, close, curVal){
   print("GetAll()")
-  
+  print(paste("Smooth series: ", smooth, sep = ""))
+  print(paste("Last close: ", close, sep = ""))
+  print(paste("Foreced value - ", curVal, " : ", force, sep = ""))
   sqlQuery <- paste("SELECT DISTINCT day_, month_, year_, close, 0 as wTran, 0 as annualized, eps, div FROM (SELECT day_, month_, year_ FROM xtse WHERE symbol = '", symb, "' UNION all SELECT 15 as day_, month_, year_ FROM earnings WHERE symbol = '", symb, "') LEFT JOIN( SELECT 15 as day2, month_ as month2, year_ as year2, div, eps FROM earnings WHERE symbol = '", symb, "') ON day_ = day2 AND month_ = month2 AND year_ = year2 LEFT JOIN ( SELECT day_ as day3, month_ as month3, year_ as year3, close FROM xtse WHERE symbol = '", symb, "') ON day_ = day3 AND month_ = month3 AND year_ = year3 ORDER BY year_, month_, day_;", sep = "")
-  print(sqlQuery)
+
   rs <- dbSendQuery(db, sqlQuery) 
   
   while (!dbHasCompleted(rs)) {
     values <- dbFetch(rs)
-    #print(dbFetch(rs))
   }
   
   ret <- values
-  
+
   #counts the number of valid data points we have for earnings
   earnsCount <- 0
   
@@ -61,8 +62,7 @@ getAll <- function(symb, smooth, force, close, curVal){
       divs[3] <- divs[4]
       divs[4] <- ret[i, "div"]
       anDiv <- divs[1] + divs[2] + divs[3] + divs[4]
-      
-      #print(paste("EPS: ", anEPS, " Div: ", anDiv, sep = ""))
+
     }
     
     if(!is.na(ret[i, "close"]) && earnsCount >= 4){
@@ -90,23 +90,31 @@ getAll <- function(symb, smooth, force, close, curVal){
   
   #fill in the annualized, p-e, and div from the sparse data
   j <- 1
+  
+  fYear <- today[["year_"]]
+  fMon <- today[["month_"]]
+  fDay <- today[["day_"]]
+  fVal <- tail(ret[["close"]],1)
+  
+  if (force == TRUE) {
+    fVal <- curVal
+    print(paste("Forced value : ", fVal, sep = ""))
+  } else if (smooth == TRUE){
+    fVal <- tail(wTrans, 1)
+    print(paste("Smoothed value : ", fVal, sep = ""))
+  } else {
+    print(paste("Last close : ", fVal, sep = ""))
+  }
+  
+  print(fVal)
+  
   for(i in 1:nrow(ret)){
     if(!(is.na(ret[[i, "close"]]))){
       #finalVals[j, "ann"] <- ret[i, "annualized"]  
-      fYear <- today[["year_"]]
-      fMon <- today[["month_"]]
-      fDay <- today[["day_"]]
-      fVal <- tail(ret[["close"]],1)
-      
-      if (force == TRUE) {
-        fVal <<- curVal
-      } else if (smooth == TRUE){
-        fVal <<- tail(wTrans, 1)
-      } 
+
       finalVals[j, "pe"] <- ret[i, "pe"]
       finalVals[j, "div"] <- ret[i, "divYld"]
- 
-      
+
       iYear <- finalVals[j, "year_"]
       iMon <- finalVals[j, "month_"]
       iDay <- finalVals[j, "day_"]
@@ -117,7 +125,7 @@ getAll <- function(symb, smooth, force, close, curVal){
     
   }
   
-  #print(finalVals)
+  print(finalVals)
   
   #TODO: smoothed time series of same length as data frame
   #generate the kernel from here for now:
@@ -184,7 +192,7 @@ shinyServer(function(input, output) {
       smooth <- TRUE
       print("Smooth selected")
     } else if (input$rb == "force"){
-      #currentVal <<- input$priceText
+      currentVal <- input$priceText
       force <- TRUE
       print(paste("Forced value selected - ", input$priceText, sep = ""))
     } else {
@@ -229,8 +237,8 @@ shinyServer(function(input, output) {
     })
     
     output$retPlot <- renderPlot({
-      #retSer <- runRets(sym)
       if(!is.null(dataSer[["ann"]])){
+        dataSer[["ann"]]
         plot(dataSer[["ann"]], pch = ".")
       }
     })
@@ -292,7 +300,8 @@ shinyServer(function(input, output) {
     }
   }
   
-  dataSer <- getAll("BNS", FALSE, TRUE, FALSE, 0.0)
+  #smooth, force, close, val
+  dataSer <- getAll("BNS", FALSE, FALSE, TRUE, 0.0)
   
   print(dataSer)
   print(dataSer[nrow(dataSer) -1,])
