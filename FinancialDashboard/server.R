@@ -364,19 +364,37 @@ shinyServer(function(input, output) {
     print(paste("PE PROJ: ", peProj, sep = ""))
     print(paste("DIV PROJ: ", divProj, sep = ""))
 
-    output$divProjBox <- renderValueBox({
-      valueBox(
-        divProj, "Dividend Projection", icon = icon("list"),
-        color = "purple"
-      )
-    })
+    if(divProj < 1.1){
+      output$divProjBox <- renderValueBox({
+        valueBox(
+          divProj, "Dividend Projection", icon = icon("list"),
+          color = "green"
+        )
+      })
+    } else {
+      output$divProjBox <- renderValueBox({
+        valueBox(
+          divProj, "Dividend Projection", icon = icon("list"),
+          color = "red"
+        )
+      })
+    }
     
-    output$peProjBox <- renderValueBox({
-      valueBox(
-        peProj, "P-E Projection", icon = icon("list"),
-        color = "yellow"
-      )
-    })
+    if (peProj < 1.1) {
+      output$peProjBox <- renderValueBox({
+        valueBox(
+          peProj, "P-E Projection", icon = icon("list"),
+          color = "green"
+        )
+      })
+    } else {
+      output$peProjBox <- renderValueBox({
+        valueBox(
+          peProj, "P-E Projection", icon = icon("list"),
+          color = "red"
+        )
+      })
+    }
     
     
   })
