@@ -160,6 +160,92 @@ runInt <- function(symb){
   intData
 }
 
+updateData <- function(){
+  #smooth, force, close, val
+  dataSer <- getAll("BNS", FALSE, FALSE, TRUE, 0.0)
+  
+  #print(dataSer)
+  #print(dataSer[nrow(dataSer) -1,])
+  #print(dataSer[nrow(dataSer),])
+  
+  todaysDiv <- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
+  todaysPE <- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
+  
+  output$pricePlot <- renderPlot({
+    
+    if(!is.null(dataSer)){
+      plot(dataSer[["close"]], pch = ".")
+    }
+  })
+  
+  output$smoothPlot <- renderPlot({
+    kern <- c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
+    wTran <- convolve(dataSer[["close"]], kern, type = "filter")
+    
+    #wTran <- runTrans("BNS")
+    if(!is.null(wTran)){
+      plot(wTran, pch = ".")
+    }
+  })
+  
+  output$retPlot <- renderPlot({
+    #retSer <- runRets("BNS")
+    if(!is.null(dataSer[["ann"]])){
+      plot(dataSer[["ann"]], pch = ".")
+    }
+  })
+  
+  output$divPlot <- renderPlot({
+    if(!is.null(dataSer[["div"]]) && nrow(dataSer) > 100){
+      todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
+      todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
+      #plot(dataSer[["divYld"]], pch = ".")
+      dSer2 <- head(dataSer, n = nrow(dataSer) - 100) 
+      dv.mod2 <- lm(ann ~ div, data = dSer2)
+      summary(dv.mod2)
+      plot(dSer2$div, dSer2$ann, xlab = "Dividend Yield", ylab = "Annualized Return")
+      abline(dv.mod2)
+      
+      divProj <<- predict(dv.mod2, data.frame(div = c(todaysDiv)))
+    }
+  })
+  
+  output$pePlot <- renderPlot({
+    todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
+    todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
+    if(!is.null(dataSer[["pe"]])){
+      #plot(dataSer[["pe"]], pch = ".")
+      dSer2 <- head(dataSer, n = nrow(dataSer) - 100)
+      #print(tail(dSer2, n = 30))
+      dv.mod1 <- lm(ann ~ pe, data = dSer2)
+      summary(dv.mod1)
+      plot(dSer2$pe, dSer2$ann, xlab = "P-E", ylab = "Annualized Return")
+      abline(dv.mod1)
+      peProj <<- predict(dv.mod1, data.frame(pe = c(todaysPE)))
+    }
+  })
+  
+  print(paste("Today's div: ", todaysDiv, sep = ""))
+  print(paste("Today's pe: ", todaysPE, sep = ""))
+  print(paste("DIV PROJ: ", divProj, sep = ""))
+  print(paste("PE PROJ: ", peProj, sep = ""))
+  
+  output$divProjBox <- renderValueBox({
+    valueBox(
+      divProj, "Dividend Projection", icon = icon("list"),
+      color = "purple"
+    )
+  })
+  
+  output$peProjBox <- renderValueBox({
+    valueBox(
+      peProj, "P-E Projection", icon = icon("list"),
+      color = "yellow" 
+    )
+  })
+  
+}
+
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
@@ -202,6 +288,7 @@ shinyServer(function(input, output) {
     }    
     
     dataSer <- getAll(sym, smooth, force, close, currentVal)
+    shortSer <- head(dataSer, nrow(dataSer) - 100)
     kern = c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
     wTran <- convolve(dataSer[["close"]], kern, type = "filter")
     print(paste("New symbol ", sym))
@@ -237,9 +324,9 @@ shinyServer(function(input, output) {
     })
     
     output$retPlot <- renderPlot({
-      if(!is.null(dataSer[["ann"]])){
-        dataSer[["ann"]]
-        plot(dataSer[["ann"]], pch = ".")
+      if(!is.null(shortSer[["ann"]])){
+        shortSer[["ann"]]
+        plot(shortSer[["ann"]], pch = ".")
       }
     })
     
@@ -248,9 +335,9 @@ shinyServer(function(input, output) {
         todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
         todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
                 #plot(dataSer[["divYld"]], pch = ".")
-        dv.mod2 <- lm(ann ~ div, data = dataSer)
+        dv.mod2 <- lm(ann ~ div, data = shortSer, na.action=na.exclude)
         summary(dv.mod2)
-        plot(dataSer$div, dataSer$ann, xlab = "Dividend Yield", ylab = "Annualized Return")
+        plot(shortSer$div, shortSer$ann, xlab = "Dividend Yield", ylab = "Annualized Return")
         abline(dv.mod2)
         divProj <<- predict(dv.mod2, data.frame(div = c(todaysDiv)))
       }
@@ -260,13 +347,13 @@ shinyServer(function(input, output) {
 
     
     output$pePlot <- renderPlot({
-      if(!is.null(dataSer[["pe"]])){
+      if(!is.null(shortSer[["pe"]])){
         todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
         todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
         #plot(dataSer[["pe"]], pch = ".")
-        dv.mod1 <- lm(ann ~ pe, data = dataSer)
+        dv.mod1 <- lm(ann ~ pe, data = shortSer, na.action=na.exclude)
         summary(dv.mod1)
-        plot(dataSer$pe, dataSer$ann, xlab = "P-E", ylab = "Annualized Return")
+        plot(shortSer$pe, shortSer$ann, xlab = "P-E", ylab = "Annualized Return")
         abline(dv.mod1)
         peProj <<- predict(dv.mod1, data.frame(pe = c(todaysPE)))
       }
@@ -299,134 +386,9 @@ shinyServer(function(input, output) {
       input$symInp
     }
   }
-  
-  #smooth, force, close, val
-  dataSer <- getAll("BNS", FALSE, FALSE, TRUE, 0.0)
-  
-  print(dataSer)
-  print(dataSer[nrow(dataSer) -1,])
-  print(dataSer[nrow(dataSer),])
-  
-  todaysDiv <- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
-  todaysPE <- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
-   
-  output$pricePlot <- renderPlot({
-
-    if(!is.null(dataSer)){
-      plot(dataSer[["close"]], pch = ".")
-    }
-  })
-  
-  output$smoothPlot <- renderPlot({
-    kern <- c(0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0)
-    wTran <- convolve(dataSer[["close"]], kern, type = "filter")
-    
-    #wTran <- runTrans("BNS")
-    if(!is.null(wTran)){
-      plot(wTran, pch = ".")
-    }
-  })
-  
-  output$retPlot <- renderPlot({
-    #retSer <- runRets("BNS")
-    if(!is.null(dataSer[["ann"]])){
-      plot(dataSer[["ann"]], pch = ".")
-    }
-  })
-  
-  output$divPlot <- renderPlot({
-    if(!is.null(dataSer[["div"]])){
-      todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
-      todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
-      #plot(dataSer[["divYld"]], pch = ".")
-      dv.mod2 <- lm(ann ~ div, data = dataSer)
-      summary(dv.mod2)
-      plot(dataSer$div, dataSer$ann, xlab = "Dividend Yield", ylab = "Annualized Return")
-      abline(dv.mod2)
-      
-      divProj <<- predict(dv.mod2, data.frame(div = c(todaysDiv)))
-    }
-  })
-  
-  output$pePlot <- renderPlot({
-    todaysDiv <<- dataSer[[nrow(dataSer), "div"]] #tail(dataSer[["div"]], 1)
-    todaysPE <<- dataSer[[nrow(dataSer), "pe"]] #tail(dataSer[["pe"]], 1)
-    if(!is.null(dataSer[["pe"]])){
-      #plot(dataSer[["pe"]], pch = ".")
-      dv.mod1 <- lm(ann ~ pe, data = dataSer)
-      summary(dv.mod1)
-      plot(dataSer$pe, dataSer$ann, xlab = "P-E", ylab = "Annualized Return")
-      abline(dv.mod1)
-      peProj <<- predict(dv.mod1, data.frame(pe = c(todaysPE)))
-    }
-  })
-  
-  print(paste("Today's div: ", todaysDiv, sep = ""))
-  print(paste("Today's pe: ", todaysPE, sep = ""))
-  print(paste("DIV PROJ: ", divProj, sep = ""))
-  print(paste("PE PROJ: ", peProj, sep = ""))
-  
-  output$divProjBox <- renderValueBox({
-    valueBox(
-      divProj, "Dividend Projection", icon = icon("list"),
-      color = "purple"
-    )
-  })
-  
-  output$peProjBox <- renderValueBox({
-    valueBox(
-      peProj, "P-E Projection", icon = icon("list"),
-      color = "yellow" 
-    )
-  })
-  
+ 
 })
 
-#getIntegrated <- function(symb){
-#  sqlQuery <- paste("SELECT DISTINCT day_, month_, year_, close, eps, div FROM (SELECT day_, month_, year_ FROM xtse WHERE symbol = '", symb, "' UNION all SELECT 15 as day_, month_, year_ FROM earnings WHERE symbol = '", symb, "') LEFT JOIN( SELECT 15 as day2, month_ as month2, year_ as year2, div, eps FROM earnings WHERE symbol = '", symb, "') ON day_ = day2 AND month_ = month2 AND year_ = year2 LEFT JOIN ( SELECT day_ as day3, month_ as month3, year_ as year3, close FROM xtse WHERE symbol = '", symb, "') ON day_ = day3 AND month_ = month3 AND year_ = year3 ORDER BY year_, month_, day_;", sep = "")
-#  print(sqlQuery)
-#  rs <- dbSendQuery(db, sqlQuery) 
-  
-#  while (!dbHasCompleted(rs)) {
-#    values <- dbFetch(rs)
-#    print(dbFetch(rs))
-#  }
-  
-#  ret <- values
-  
-  #counts the number of valid data points we have for earnings
-#  earnsCount <- 0
-  
-  #track the last four eps and div
-#  earns <- c(0,0,0,0)
-#  divs <- c(0,0,0,0)
-#  anEPS <- 0.0
-#  anDiv <- 0.0
-  
-#  for(i in 1:nrow(ret)){
-#    if(!is.na(ret[[i, "eps"]])){
-#      earnsCount <- earnsCount + 1
-#      earns[1] <- earns[2]
-#      earns[2] <- earns[3]
-#      earns[3] <- earns[4]
-#      earns[4] <- ret[i, "eps"]
-#      anEPS <- earns[1] + earns[2] + earns[3] + earns[4]
-      
-#      divs[1] <- divs[2]
-#      divs[2] <- divs[3]
-#      divs[3] <- divs[4]
-#      divs[4] <- ret[i, "div"]
-#      anDiv <- divs[1] + divs[2] + divs[3] + divs[4]
-      
-      #print(paste("EPS: ", anEPS, " Div: ", anDiv, sep = ""))
-#    }
-    
-#    if(!is.na(ret[i, "close"]) && earnsCount >= 4){
-#      ret[i, "pe"] <- ret[i, "close"] / anEPS
-#      ret[i, "divYld"] <- 100 * anDiv / ret[i, "close"] 
-#    }
-#  }
-  
-#  return(ret)
-  
-#}
+
+
+
