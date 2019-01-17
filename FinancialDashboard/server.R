@@ -10,7 +10,7 @@ require(lattice)
 db <- dbConnect(SQLite(), dbname="~/Data/CADFinance.db")
 
 #####
-# getIntegrated
+# getAll
 #
 # returns a dataframe which contains all the information:
 # date
@@ -100,7 +100,7 @@ getAll <- function(symb, smooth, force, close, curVal){
     fVal <- curVal
     print(paste("Forced value : ", fVal, sep = ""))
   } else if (smooth == TRUE){
-    fVal <- tail(wTrans, 1)
+    fVal <- wTrans[nrow(wTrans)]
     print(paste("Smoothed value : ", fVal, sep = ""))
   } else {
     print(paste("Last close : ", fVal, sep = ""))
@@ -274,7 +274,7 @@ shinyServer(function(input, output) {
     close <- FALSE
     
     if(input$rb == "smooth"){
-      #currentVal <<- wTran[nrow(wTran)]
+      #currentVal <- wTran[nrow(wTran)]
       smooth <- TRUE
       print("Smooth selected")
     } else if (input$rb == "force"){
