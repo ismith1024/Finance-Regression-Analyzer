@@ -2,6 +2,8 @@
 
 Personal finance project - predicts five year returns given fundamental analysis parameters.
 
+Note: I am in the process of migrating this project to a Flask application in Python.
+
 
 ### Table of Contents
 
@@ -39,3 +41,6 @@ This application provides real-world useful analysis, but the UI should probably
 I would like to improve the gaussian kernal functions to use a long kernel for current price and a short kernel for historic price data.  Kernel functions need to be written to accommodate one-sided kernels.
 
 The project is still active and I will improve it once time permits.
+
+Feature, 2019-04: 
+Implemented a python function to improve the performance of the data smoothing near the endpoints using gaussian kernels.  For values of the function less than half the kernel width from the endpoints of the function, convolve with those elements of the kernel which do not lie outside the function's endpoints, and then divide each resulting convolution value by the area under the portion of the kernel used in this way.
