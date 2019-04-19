@@ -22,6 +22,10 @@ The purpose of this project is to predict five-year market returns for equities 
 Using fundamental analysis, the purpose is to predict long-term returns using a Value investing style.  This
 is in contrast to most trading bots, which perform technical analysis on the time series price values.
 
+![alt text](https://github.com/ismith1024/Finance-Regression-Analyzer/blob/master/value_screen_1.png "UI -- processed time series")
+
+![alt text](https://github.com/ismith1024/Finance-Regression-Analyzer/blob/master/value_screen_2.png?raw=true "UI -- linear model")
+
 ## Files <a name="files"></a>
 
 server.r - contains the core functionality of the app
