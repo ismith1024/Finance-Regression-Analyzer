@@ -1,0 +1,117 @@
+Ian Smith
+· ·
+ismith1024@gmail.com
++ 1 613-601-0541
+208-323 Winona Ave
+Ottawa, Ontario, Canada
+github.com/ismith1024
+·
+K1Z 5H3
+
+Summary
+
+I provide solutions for Business process automation, data pipelines, web-based tools for supply chain risk assessment, and scraping
+web repositories to obtain research data. I provide machine learning, data analysis, and process automation solutions 
+in Python for an engineering team in the domain of supply chain risk analysis. I also interpret the results of the findings and 
+communicate directly to stakeholders — customers, my internal organization, and the public.
+
+
+Technical Skills
+Technologies: Python (Pandas, Requests, Scikit-learn, NumPy, Flask, matplotlib, Plotly), SQL , Java, Javascript,
+R , Jupyter Notebooks, Git
+Applications: Data pipelines and ETL , Web scraping, Machine learning, Natural language processing, Web
+apps, Mathematical and Statistical models, Business-domain research
+Professional Experience
+Intertek
+Global Restricted Substances — Ottawa, Canada
+Engineer
+October 2009 – present
+Intertek is a global auditing, testing, and certification service provider. Designed and implemented a
+configurable risk analysis platform for worldwide chemical regulatory compliance. Mine and analyze
+data to keep up to date on enforcement and risk trends. Automate business processes. Mentor junior
+team members. Regularly communicate with consulting customers, Intertek teams, and the public.
+Ageus Solutions
+Ottawa, Canada
+Engineer
+January 2005 – October 2009
+Ageus Solutions was a successful independent consulting startup which was integrated into Intertek
+Health and Environmental after acquisition. One of the founders of the company. Served on board of
+Directors and as a corporate officer. Responsible for legal due diligence during M&A . Designed core
+analytical services and directed team of regulatory researchers.
+Nortel Networks
+Optical Components — Ottawa, Canada
+IC Designer
+June 2000 – December 2004
+The former Nortel Optical Components Group designed and fabricated GaAs ICs for use in optical long
+haul equipment. Analyzed integrated circuits and discrete semiconductor devices for root-cause of
+failure. Assembled and ran laboratory at minimal cost during downsizing. Experimentally demon-
+strated recurring failure mechanisms. Advised manufacturing operations to implement corrective
+action.
+Education
+Carleton University
+Ottawa, Canada
+Bachelor of Computer Science, Honors
+2018
+With High Distinction. Data management, AI , and software engineering. Web and mobile application
+development. Computer Vision. Awarded Senate Medal for Outstanding Academic Achievement
+University of Manitoba
+Winnipeg, Canada
+B.Sc. (Electrical Engineering)
+1999
+Focused on microelectronics and VLSI design. Acquired proficiency in IC design tools, statistics and
+mathematics, and C++ .
+Udacity
+Data Scientist Nanodegree
+2019
+Supervised learning, Unsupervised Learning, Deep Learning, Stakeholder Communication, Experi-
+mental Design, Software Engineering, ETL Pipelines, NLP PipelinesSelected Professional Projects
+Material Risk Analysis Application
+Purpose: Analyzes a customer’s supply chain for material risks. Evaluated multi-class machine
+learning algorithms including Naive Bayesian Classifier, Support Vector Machine, and Random Forest
+to determine the types of materials used in a product based on text extracted from its design files.
+Renders a tabular report with recommended testing plan or design revisions, to assist a material science
+SME . Deployed in a Flask application using a REST API .
+Results: Reduced a multi-week engineering workflow to hours. Allows customers to apply chemical
+testing in a targeted, cost-effective manner. 718 successful customer-projects to date.
+Technology: Python (Scikit-learn, Pandas, NumPy, Flask, NLTK ), Jupyter Notebooks, SQL , Javascript,
+Supervised Machine Learning, Statistical Analysis, Natural Language Processing, Information Theory
+Material Risk Knowledge Base
+Purpose: Periodically mines product recall and litigation repositories to obtain up-to-date chemical
+infraction data set. Cleans and transforms raw HTML and XML , processes free text, and stores results
+in SQL repository.
+Results: Intertek maintains an industry-leading knowledge base on current uses of 723 regulated
+chemicals, and in which of 214 material or component types they occur.
+Technology:
+Python (Pandas, Requests, NLTK ), Java, SQL
+ETL Pipelines
+Purpose: Automates customers’ product design encodings and results of conformity assessments
+from various sources. Maps schemas, cleans data, stores in engineering SQL database.
+Results: Intertek is able to accept product conformity data from in-house sources, third-party service
+providers, or customers, and deliver a consistent, repeatable analysis product.
+Technology:
+Python, SQL
+Personal or Academic Projects
+Carleton University Honors Project
+Purpose: Uses Natural Language Processing to extract product structure and composition from free
+text obtained from industrial designs. Implemented in C++ .
+Results: Portions of this project were suitable for deployment in an industrial setting, as part of
+Intertek’s Risk Analysis Application. The project was awarded a grade of A+ .
+Technology:
+in C++
+C++ , Machine Learning, Natural Language Processing, NLTK API . Built NLP from scratch
+TSX Value Anaylzer
+Purpose: Built to investigate fundamental analysis at a time when “value invesing” was out of style
+and “value stocks” were depressed in price. It uses a regression learner trained on fundamentals, and
+predicts five-year returns of candidate investments. The Shiny framework provides the user with a
+GUI .
+Results: Application performs well in real-world situations; selected candidates have exceeded the
+S&P/TSX Composite Index.
+Technology:
+R , SQL , Javascript
+Udacity Deep-Learning Project
+Purpose: Classify the Oxford ”Flowers” dataset by species using a convolutional neural network.
+Technology: Pytorch, Deep neural networks, Computer vision
+Udacity Supervised Learning Project
+Purpose: Evaluated Random Forest, Adaboost, Bayesian Classifiers in scikit-learn using the California
+Census dataset.
+Technology: Python, Jupyter Notebooks, scikit-learn
