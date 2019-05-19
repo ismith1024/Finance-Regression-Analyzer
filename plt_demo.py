@@ -83,23 +83,36 @@ def return_to_date(row, today, last_close):
     ann_gain = gain ** (1/elapsed_years)
     return 100 * (ann_gain - 1.0) 
 
+'''
+advfn.db - uses google notation
+tmx.db - uses google notation
+yahoo.db 
+    aav_prices uses yahoo notation
+    divs uses yahoo notation
+    splits uses yahoo notation
+    tsx_prices uses google notation
+    yahoo_indicators uses yahoo notation
+
+'''
+
 def main():
     if len(sys.argv) == 2:
         symbol = sys.argv[1]
 
         yahoo_db = '/home/ian/Data/yahoo.db'
         tmx_db = '/home/ian/Data/tmx.db'
-        advfn_db = '/home/ian/Data/advfn.db'
+        #advfn_db = '/home/ian/Data/advfn.db'
 
         yahoo_database = sqlite3.connect(yahoo_db)
         tmx_database = sqlite3.connect(tmx_db)
-        advfn_database = sqlite3.connect(advfn_db)
+        #advfn_database = sqlite3.connect(advfn_db)
         #symbol = 'SLF'
 
         print('Generate data set for {0}'.format(symbol))
         print('   SQL queries...')
 
-        tmx_sql = '''SELECT date, eps FROM tmx_earnings WHERE symbol = "{0}"'''.format(symbol)
+        #change this from yahoo to google notation
+        tmx_sql = '''SELECT date, eps FROM tmx_earnings WHERE symbol = "{0}"'''.format(symbol.replace('-','.'))
         df_tmx = pd.read_sql_query(tmx_sql, tmx_database)
         df_tmx.columns = ['date', 'eps']
         df_tmx['date_parsed'] = df_tmx['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
@@ -111,7 +124,8 @@ def main():
         df_aav['date_parsed'] = df_aav['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
         df_aav.drop(columns = 'date', inplace = True)
 
-        yahoo_prices_sql = '''SELECT Date, Close FROM tsx_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol)
+        #need to change yahoo notation to google notation
+        yahoo_prices_sql = '''SELECT Date, Close FROM tsx_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol.replace('-','.'))
         df_y_price = pd.read_sql_query(yahoo_prices_sql, yahoo_database)
         df_y_price.columns = ['date', 'close']
         df_y_price['date_parsed'] = df_y_price['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
