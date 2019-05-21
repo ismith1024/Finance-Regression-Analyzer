@@ -4,6 +4,11 @@ import datetime
 import numpy as np
 import matplotlib
 import sys
+from sklearn.linear_model import LinearRegression
+from scipy import stats
+from sklearn import preprocessing
+from sklearn.model_selection import KFold
+
 from matplotlib import pyplot as plt
 #plt.figure(figsize=(20,10))
 
@@ -81,7 +86,72 @@ def return_to_date(row, today, last_close):
     elapsed_years = (today - row['date_parsed']).days / 365.25
     gain = last_close / row['close']
     ann_gain = gain ** (1/elapsed_years)
-    return 100 * (ann_gain - 1.0) 
+    return 100 * (ann_gain - 1.0)
+
+def print_metrics(df, divs):
+    df.plot(x = 'date_parsed', y ='avg_50', figsize=(20,10), title='Daily Close')
+    df[:'2018-06-01'].plot(x = 'date_parsed', y ='tot_gain', figsize=(20,10), title='Total Return')
+    df.hist(['pe'], bins=40, figsize=(20,10))
+    df.plot(x = 'date_parsed', y ='pe', figsize=(20,10), title = 'P-E Time Series')
+
+    if divs:
+        df.hist(['dy'], bins=40, figsize=(20,10))
+        df.plot(x = 'date_parsed', y ='dy', figsize=(20,10), title = 'Dividend Time Series')
+
+    plt.show()
+
+def show_regression(df, divs):
+
+    X = pd.DataFrame(df['2018-05-06':]['pe'])
+    y = pd.DataFrame(df['2018-05-06':]['tot_gain'])
+
+    X.fillna(value = 0, inplace = True)
+    y.fillna(value = 0, inplace = True)
+
+    model = LinearRegression()
+    scores = []
+    kfold = KFold(n_splits=3, shuffle=True, random_state=42)
+    for i, (train, test) in enumerate(kfold.split(X, y)):
+        model.fit(X.iloc[train,:], y.iloc[train,:])
+        score = model.score(X.iloc[test,:], y.iloc[test,:])
+        scores.append(score)
+
+    print('Rsquared for 3-fold p-e data:' + str(scores))
+    ### Plot the regression
+    y_pred = model.predict(X)
+    plt.scatter(X, y,  color='black')
+    plt.plot(X, y_pred, color='blue', linewidth=3)
+    plt.xticks(())
+    plt.yticks(())
+    plt.show()
+
+
+
+    if divs:
+        X = pd.DataFrame(df['2018-05-06':]['dy'])
+        y = pd.DataFrame(df['2018-05-06':]['tot_gain'])
+
+        X.fillna(value = 0, inplace = True)
+        y.fillna(value = 0, inplace = True)
+
+        model2 = LinearRegression()
+        scores2 = []
+        kfold2 = KFold(n_splits=3, shuffle=True, random_state=42)
+        for i, (train, test) in enumerate(kfold2.split(X, y)):
+            model2.fit(X.iloc[train,:], y.iloc[train,:])
+            score2 = model2.score(X.iloc[test,:], y.iloc[test,:])
+            scores2.append(score2)
+
+        print('Rsquared for 3-fold div data:' + str(scores2))
+
+        y_pred2 = model2.predict(X)
+        plt.scatter(X, y,  color='black')
+        plt.plot(X, y_pred2, color='blue', linewidth=3)
+        plt.xticks(())
+        plt.yticks(())
+        plt.show()
+
+
 
 '''
 advfn.db - uses google notation
@@ -201,17 +271,8 @@ def main():
 
         print('  complete!')
 
-        df.plot(x = 'date_parsed', y ='avg_50', figsize=(20,10), title='Daily Close')
-        df[:'2018-06-01'].plot(x = 'date_parsed', y ='tot_gain', figsize=(20,10), title='Total Return')
-        df.hist(['pe'], bins=40, figsize=(20,10))
-        df.plot(x = 'date_parsed', y ='pe', figsize=(20,10), title = 'P-E Time Series')
-
-        if divs:
-            df.hist(['dy'], bins=40, figsize=(20,10))
-            df.plot(x = 'date_parsed', y ='dy', figsize=(20,10), title = 'Dividend Time Series')
-
-
-        plt.show()
+        #print_metrics(df, divs)
+        show_regression(df, divs)
 
     else:
         print('Please provide the symbol')
