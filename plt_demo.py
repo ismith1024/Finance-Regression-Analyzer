@@ -89,6 +89,10 @@ def return_to_date(row, today, last_close):
     return 100 * (ann_gain - 1.0)
 
 def print_metrics(df, divs):
+    '''
+    Plots the 50-day smoothed price series, total return, p-e & yield histograms, and p-e & yeild time series
+    Only plots dividends if divs == True
+    '''
     df.plot(x = 'date_parsed', y ='avg_50', figsize=(20,10), title='Daily Close')
     df[:'2018-06-01'].plot(x = 'date_parsed', y ='tot_gain', figsize=(20,10), title='Total Return')
     df.hist(['pe'], bins=40, figsize=(20,10))
@@ -100,10 +104,70 @@ def print_metrics(df, divs):
 
     plt.show()
 
-def show_regression(df, divs):
+def prune_data(df, divs, num_sig):
+    '''
+    Removes outliers from the dataframe
+    Removes num_sig-sigma
+    '''
 
-    X = pd.DataFrame(df['2018-05-06':]['pe'])
-    y = pd.DataFrame(df['2018-05-06':]['tot_gain'])
+    if divs:
+        pe_mean = np.mean(df['pe'])
+        pe_std = np.std(df['pe'])
+        div_mean = np.mean(df['dy'])
+        div_std = np.std(df['dy'])
+        gain_mean = np.mean(df['tot_gain'])
+        gain_std = np.std(df['tot_gain'])
+        pe_upper = pe_mean + num_sig * pe_std
+        pe_lower = pe_mean - num_sig * pe_std
+        div_upper = div_mean + num_sig * div_std
+        div_lower = div_mean - num_sig * div_std
+        gain_upper = gain_mean + num_sig * gain_std
+        gain_lower = gain_mean - num_sig * gain_std
+
+        df_pruned = df[(df['pe'] < pe_upper) & (df['pe'] > pe_lower) & (df['dy'] < div_upper) & (df['dy'] > div_lower) & (df['pe'] > 0) & (df['tot_gain'] < gain_upper) & (df['tot_gain'] > gain_lower)].copy()
+        #df_pruned = df[(df['pe'] < pe_upper)].copy()
+ 
+        #print('P-E mean: {0}  P-E std dev: {1}  P-E Upper: {2}  P-E Lower: {3}'.format(str(pe_mean), str(pe_std), str(pe_upper), str(pe_lower)))
+
+    else:
+        pe_mean = np.mean(df['pe'])
+        pe_std = np.std(df['pe'])
+
+        pe_upper = pe_mean + num_sig * pe_std
+        pe_lower = pe_mean - num_sig * pe_std
+        
+        gain_mean = np.mean(df['tot_gain'])
+        gain_std = np.std(df['tot_gain'])
+        
+        gain_upper = gain_mean + num_sig * gain_std
+        gain_lower = gain_mean - num_sig * gain_std
+
+        df_pruned = df[(df['pe'] < pe_upper) & (df['pe'] > pe_lower) & (df['pe'] > 0) & (df['tot_gain'] < gain_upper) & (df['tot_gain'] > gain_lower)].copy()
+
+    df_pruned.hist(['pe'], bins=50, figsize=(20,10))
+
+    if divs:
+        df_pruned.hist(['dy'], bins=50, figsize=(20,10))
+        
+    #plt.xticks(())
+    #plt.yticks(())
+    #plt.show()
+    return df_pruned
+
+def show_regression(df, divs):
+    '''
+    Trains a regression learner for pe-total gain and yield-total gain
+    K-folds the data and prints r_squared for each fold
+    Plots the most recent fold
+    Gain is used up to 2017-05-06
+    '''
+
+    #was 2018-05-06
+
+    df_pruned = prune_data(df['2017-05-06':], divs, 3.0)
+
+    X = pd.DataFrame(df_pruned['pe'])
+    y = pd.DataFrame(df_pruned['tot_gain'])
 
     X.fillna(value = 0, inplace = True)
     y.fillna(value = 0, inplace = True)
@@ -128,8 +192,8 @@ def show_regression(df, divs):
 
 
     if divs:
-        X = pd.DataFrame(df['2018-05-06':]['dy'])
-        y = pd.DataFrame(df['2018-05-06':]['tot_gain'])
+        X = pd.DataFrame(df_pruned['dy'])
+        y = pd.DataFrame(df_pruned['tot_gain'])
 
         X.fillna(value = 0, inplace = True)
         y.fillna(value = 0, inplace = True)
@@ -151,6 +215,10 @@ def show_regression(df, divs):
         plt.yticks(())
         plt.show()
 
+    #df_pruned.hist(['tot_gain'], bins=50, figsize=(20,10))
+    #plt.xticks(())
+    #plt.yticks(())
+    #plt.show()
 
 
 '''
@@ -273,6 +341,8 @@ def main():
 
         #print_metrics(df, divs)
         show_regression(df, divs)
+        #prune_data(df, divs, 3.0)
+        
 
     else:
         print('Please provide the symbol')
