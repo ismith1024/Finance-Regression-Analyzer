@@ -103,16 +103,16 @@ def print_metrics(df, divs):
     Plots the 50-day smoothed price series, total return, p-e & yield histograms, and p-e & yeild time series
     Only plots dividends if divs == True
     '''
-    df.plot(x = 'date_parsed', y ='avg_50', figsize=(20,10), title='Daily Close')
-    df[:'2018-06-01'].plot(x = 'date_parsed', y ='tot_gain', figsize=(20,10), title='Total Return')
-    df.hist(['pe'], bins=40, figsize=(20,10))
-    df.plot(x = 'date_parsed', y ='pe', figsize=(20,10), title = 'P-E Time Series')
+    #df.plot(x = 'date_parsed', y ='avg_50', figsize=(20,10), title='Daily Close')
+    #df[:'2018-06-01'].plot(x = 'date_parsed', y ='tot_gain', figsize=(20,10), title='Total Return')
+    #df.hist(['pe'], bins=40, figsize=(20,10))
+    #df.plot(x = 'date_parsed', y ='pe', figsize=(20,10), title = 'P-E Time Series')
 
-    if divs:
-        df.hist(['dy'], bins=40, figsize=(20,10))
-        df.plot(x = 'date_parsed', y ='dy', figsize=(20,10), title = 'Dividend Time Series')
+    #if divs:
+    #    df.hist(['dy'], bins=40, figsize=(20,10))
+    #    df.plot(x = 'date_parsed', y ='dy', figsize=(20,10), title = 'Dividend Time Series')
 
-    plt.show()
+    #plt.show()
 
 def prune_data(df, divs, num_sig):
     '''
@@ -176,6 +176,10 @@ def show_regression(df, divs, symbol):
 
     df_pruned = prune_data(df['2017-05-06':], divs, 3.0)
 
+    if df_pruned.shape[0] < 3:
+        print('Not enough data')
+        return
+
     X = pd.DataFrame(df_pruned['pe'])
     y = pd.DataFrame(df_pruned['tot_gain'])
 
@@ -193,17 +197,16 @@ def show_regression(df, divs, symbol):
     print('Rsquared for 3-fold p-e data:' + str(scores))
     ### Plot the regression
     y_pred = model.predict(X)
-    plt.scatter(X, y,  color='black')
-    plt.plot(X, y_pred, color='blue', linewidth=3)
-    plt.xticks(())
-    plt.yticks(())
-    plt.show()
+    #plt.scatter(X, y,  color='black')
+    #plt.plot(X, y_pred, color='blue', linewidth=3)
+    #plt.xticks(())
+    #plt.yticks(())
+    #plt.show()
 
-    #Today's BNS
-    pe_today = 20.97
-    dy_today = 0.0172
-    pred_val = model.predict(pe_today)
-    print('Predicted value from pe: ' + str(pred_val))
+    sql_text = 'INSERT OR IGNORE INTO regression_metrics(symbol, method, fold_1, fold_2, fold_3) VALUES(?, ?, ?, ?, ?)'
+    job = (symbol, 'p-e', scores[0], scores[1], scores[2])
+    advfn_curs.execute(sql_text, job)
+    advfn_database.commit()
 
     if divs:
         X = pd.DataFrame(df_pruned['dy'])
@@ -222,23 +225,22 @@ def show_regression(df, divs, symbol):
 
         print('Rsquared for 3-fold div data:' + str(scores2))
 
+        sql_text = 'INSERT OR IGNORE INTO regression_metrics(symbol, method, fold_1, fold_2, fold_3) VALUES(?, ?, ?, ?, ?)'
+        job = (symbol, 'divs', scores2[0], scores2[1], scores2[2])
+        advfn_curs.execute(sql_text, job)
+        advfn_database.commit()
+
         y_pred2 = model2.predict(X)
-        plt.scatter(X, y,  color='black')
-        plt.plot(X, y_pred2, color='blue', linewidth=3)
-        plt.xticks(())
-        plt.yticks(())
-        plt.show()
+        #plt.scatter(X, y,  color='black')
+        #plt.plot(X, y_pred2, color='blue', linewidth=3)
+        #plt.xticks(())
+        #plt.yticks(())
+        #plt.show()
 
-        #Today's ENB
-        pe_today = 20.97
-        dy_today = 0.0172
-        pred_val = model2.predict(dy_today)
-        print('Predicted value from divs: ' + str(pred_val))
-
-    df_pruned.hist(['tot_gain'], bins=50, figsize=(20,10))
-    plt.xticks(())
-    plt.yticks(())
-    plt.show()
+    #df_pruned.hist(['tot_gain'], bins=50, figsize=(20,10))
+    #plt.xticks(())
+    #plt.yticks(())
+    #plt.show()
 
 def show_regression2(df, divs, symbol):
     '''
@@ -256,7 +258,32 @@ def show_regression2(df, divs, symbol):
         print('Not enough data')
         return
 
-    if divs:
+    if not divs:
+
+        X = pd.DataFrame(df_pruned['pe'])
+        y = pd.DataFrame(df_pruned['tot_gain'])
+
+        X.fillna(value = 0, inplace = True)
+        y.fillna(value = 0, inplace = True)
+
+        model = LinearRegression()
+        scores = []
+        kfold = KFold(n_splits=3, shuffle=True, random_state=42)
+        for i, (train, test) in enumerate(kfold.split(X, y)):
+            model.fit(X.iloc[train,:], y.iloc[train,:])
+            score = model.score(X.iloc[test,:], y.iloc[test,:])
+            scores.append(score)
+
+        print('Rsquared for 3-fold p-e data:' + str(scores))
+        ### Plot the regression
+        y_pred = model.predict(X)
+        #plt.scatter(X, y,  color='black')
+        #plt.plot(X, y_pred, color='blue', linewidth=3)
+        #plt.xticks(())
+        #plt.yticks(())
+        #plt.show()
+
+    else:
         X = pd.DataFrame(df_pruned[['pe', 'dy']])
         y = pd.DataFrame(df_pruned['tot_gain'])
 
@@ -275,24 +302,27 @@ def show_regression2(df, divs, symbol):
 
         y_pred2 = model2.predict(X)
         
-        plt.scatter(X['dy'], y,  color='blue')
-        plt.plot(X['dy'], y_pred2, color='red', linewidth=3)
-        plt.xticks(())
-        plt.yticks(())
-        plt.show()
+        #plt.scatter(X['dy'], y,  color='blue')
+        #plt.plot(X['dy'], y_pred2, color='red', linewidth=3)
+        #plt.xticks(())
+        #plt.yticks(())
+        #plt.show()
 
-        plt.scatter(X['pe'], y,  color='blue')
-        plt.plot(X['pe'], y_pred2, color='red', linewidth=3)
-        plt.xticks(())
-        plt.yticks(())
-        plt.show()
+        #plt.scatter(X['pe'], y,  color='blue')
+        #plt.plot(X['pe'], y_pred2, color='red', linewidth=3)
+        #plt.xticks(())
+        #plt.yticks(())
+        #plt.show()
 
-        #Today's BNS
-        pe_today = 20.97
-        dy_today = 0.0172
-        pred_val = model2.predict(np.array([pe_today,dy_today]).reshape(1, -1))
-        print('Predicted value from multiple regression:  ' + str(pred_val))
+        sql_text = 'INSERT OR IGNORE INTO regression_metrics(symbol, method, fold_1, fold_2, fold_3) VALUES(?, ?, ?, ?, ?)'
+        job = (symbol, 'multiple', scores2[0], scores2[1], scores2[2])
+        advfn_curs.execute(sql_text, job)
+        advfn_database.commit()
 
+    #df_pruned.hist(['tot_gain'], bins=50, figsize=(20,10))
+    #plt.xticks(())
+    #plt.yticks(())
+    #plt.show()
 
 
 '''
@@ -412,9 +442,110 @@ def main():
 
     else:
         sql_symbols = 'SELECT company_ticker FROM tsx_companies'
-        symbols = advfn_curs.fetchall(sql_symbols)
-        for symbol in symbols:
-            print(symbol)
+        advfn_curs.execute(sql_symbols)
+        res = advfn_curs.fetchall()
+        symbols = []
+        for sym in res:
+            symbols.append(sym[0])
+            symbol = sym[0]
+            print('Generate data set for {0}'.format(symbol))
+            print('   SQL queries...')
+
+            #change this from yahoo to google notation
+            tmx_sql = '''SELECT date, eps FROM tmx_earnings WHERE symbol = "{0}"'''.format(symbol.replace('-','.'))
+            df_tmx = pd.read_sql_query(tmx_sql, tmx_database)
+            df_tmx.columns = ['date', 'eps']
+            df_tmx['date_parsed'] = df_tmx['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
+            df_tmx.drop(columns = 'date', inplace = True)
+
+            aav_sql = '''SELECT Date, Close FROM aav_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol)
+            df_aav = pd.read_sql_query(aav_sql, yahoo_database)
+            df_aav.columns = ['date', 'close']
+            df_aav['date_parsed'] = df_aav['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
+            df_aav.drop(columns = 'date', inplace = True)
+
+            #need to change yahoo notation to google notation
+            yahoo_prices_sql = '''SELECT Date, Close FROM tsx_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol.replace('-','.'))
+            df_y_price = pd.read_sql_query(yahoo_prices_sql, yahoo_database)
+            df_y_price.columns = ['date', 'close']
+            df_y_price['date_parsed'] = df_y_price['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
+            df_y_price.drop(columns = 'date', inplace = True)
+
+            divs_sql = '''SELECT Date, Dividends FROM divs WHERE symbol = "{0}"'''.format(symbol)
+            df_divs = pd.read_sql_query(divs_sql, yahoo_database) 
+            df_divs.columns = ['date', 'div']
+            df_divs['date_parsed'] = df_divs['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
+            df_divs.drop(columns = 'date', inplace = True)
+
+            df_price = pd.concat([df_y_price, df_aav])
+            print('Before: ' + str(df_price.shape[0]))
+            df_price.drop_duplicates(subset='date_parsed', inplace = True)
+            print('After: ' + str(df_price.shape[0]))
+            df_price
+
+            split_sql = '''SELECT date, total_adjustment FROM splits WHERE symbol = "{0}"'''.format(symbol)
+            df_split = pd.read_sql_query(split_sql, yahoo_database) 
+            df_split.columns = ['date', 'split_adj']
+            df_split['date_parsed'] = df_split['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
+            df_split.drop(columns = 'date', inplace = True)
+
+            print('   complete!')
+
+            print('   Merge dataframes...')
+            df = df_price.join(df_tmx.set_index('date_parsed'), on = 'date_parsed', how = 'outer', sort = True)
+
+            df = df.join(df_divs.set_index('date_parsed'), on = 'date_parsed', how = 'outer', sort = True)
+
+            df.fillna(method='ffill', inplace = True)
+
+            df = df.join(df_split.set_index('date_parsed'), on = 'date_parsed', how = 'outer', sort = True)
+            df.set_index(df['date_parsed'], inplace= True)
+
+            #split adjustment for current date is 1.0 -- backfill missing values
+
+            df.iloc[-1, df.columns.get_loc('split_adj')] = 1.0
+            df['split_adj'].fillna(method='bfill', inplace = True)
+            df.tail(5)
+
+            #this is for current quarter only - go back and fill the TTM on df_earnings and df_divs
+            df['pe'] = 0.0
+            df['dy'] = 0.0
+
+            print('   complete!')
+            print('   Calculate yield and eps...')
+                
+                
+            df['close'].fillna(method = 'bfill', inplace = True)
+            df.apply((lambda x: process_row(x, df)), axis = 1)
+
+            print('   complete!')
+            print('   Calculate returns...')
+
+            df['avg_50'] = custom_kernel(df['close'], kern_50)
+            df['avg_200'] = custom_kernel(df['close'], kern_200)
+
+            today = datetime.datetime.today()
+            last_close = df.tail(1)['avg_200'][0]
+
+            #print('Elapsed: ' + str((today - df.head(1)['date_parsed'][0]).days / 365.25 ) + ' years')
+
+            df['cap_gain'] = df.apply(lambda x: return_to_date(x, today, last_close), axis = 1) 
+            if (df.tail(1)['dy'][0] > 0):
+                divs = True
+                print('Found a dividend yield')
+                df['tot_gain'] = df['cap_gain'] + (df['dy'] * 100)
+            else:
+                divs = False
+                print('No dividend yield found')
+                df['tot_gain'] = df['cap_gain']
+
+            print('  complete!')
+
+            #print_metrics(df, divs)
+            show_regression(df, divs, symbol)
+            show_regression2(df, divs, symbol)
+            #prune_data(df, divs, 3.0)
+
 
 
 if __name__ == '__main__':
