@@ -200,8 +200,8 @@ def show_regression(df, divs, symbol):
     plt.show()
 
     #Today's BNS
-    pe_today = 20.97
-    dy_today = 0.0172
+    pe_today = 10.30
+    dy_today = 0.0494
     pred_val = model.predict(pe_today)
     print('Predicted value from pe: ' + str(pred_val))
 
@@ -230,8 +230,8 @@ def show_regression(df, divs, symbol):
         plt.show()
 
         #Today's ENB
-        pe_today = 20.97
-        dy_today = 0.0172
+        pe_today = 10.30
+        dy_today = 0.0494
         pred_val = model2.predict(dy_today)
         print('Predicted value from divs: ' + str(pred_val))
 
@@ -288,8 +288,8 @@ def show_regression2(df, divs, symbol):
         plt.show()
 
         #Today's BNS
-        pe_today = 20.97
-        dy_today = 0.0172
+        pe_today = 10.30
+        dy_today = 0.0494
         pred_val = model2.predict(np.array([pe_today,dy_today]).reshape(1, -1))
         print('Predicted value from multiple regression:  ' + str(pred_val))
 
