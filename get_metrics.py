@@ -174,7 +174,7 @@ def show_regression(df, divs, symbol):
 
     #was 2018-05-06
 
-    df_pruned = prune_data(df['2017-05-06':], divs, 3.0)
+    df_pruned = prune_data(df[:'2017-05-06'], divs, 3.0)
 
     if df_pruned.shape[0] < 3:
         print('Not enough data')
@@ -252,7 +252,7 @@ def show_regression2(df, divs, symbol):
 
     #was 2018-05-06
 
-    df_pruned = prune_data(df['2017-05-06':], divs, 3.0)
+    df_pruned = prune_data(df[:'2017-05-06'], divs, 3.0)
 
     if df_pruned.shape[0] < 3:
         print('Not enough data')

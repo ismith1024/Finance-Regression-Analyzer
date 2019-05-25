@@ -112,16 +112,25 @@ def print_metrics(df, divs):
     Plots the 50-day smoothed price series, total return, p-e & yield histograms, and p-e & yeild time series
     Only plots dividends if divs == True
     '''
-    df.plot(x = 'date_parsed', y ='avg_50', figsize=(20,10), title='Daily Close')
+    ax = df.plot(x = 'date_parsed', y ='avg_50', figsize=(20,10), title='Daily Close')
+    ax = ax[0]
+    for x in ax:
+        x.set_title('Daily close')
+    
     df[:'2018-06-01'].plot(x = 'date_parsed', y ='tot_gain', figsize=(20,10), title='Total Return')
+
     df.hist(['pe'], bins=40, figsize=(20,10))
     df.plot(x = 'date_parsed', y ='pe', figsize=(20,10), title = 'P-E Time Series')
+    plt.xlabel('P-E Histogram', fontsize=15)
+    plt.title('P-E histogram')
+    plt.show()
 
     if divs:
         df.hist(['dy'], bins=40, figsize=(20,10))
         df.plot(x = 'date_parsed', y ='dy', figsize=(20,10), title = 'Dividend Time Series')
-
-    plt.show()
+        plt.title('Divs histogram')
+        plt.show()
+    
 
 def prune_data(df, divs, num_sig):
     '''
@@ -177,8 +186,8 @@ def show_metrics_distribution(df, divs, symbol):
         pe_std = np.std(df['pe'])
         div_mean = np.mean(df['dy'])
         div_std = np.std(df['dy'])
-        gain_mean = np.mean(df['tot_gain'])
-        gain_std = np.std(df['tot_gain'])
+        gain_mean = np.mean(df[:'2017-06-06']['tot_gain']) 
+        gain_std = np.std(df[:'2017-06-06']['tot_gain'])
 
         gain_upper = gain_mean + gain_std
         gain_lower = gain_mean - gain_std
@@ -223,11 +232,16 @@ def show_metrics_distribution(df, divs, symbol):
 
         #plot the time series
         df.plot(x = 'date_parsed', y ='avg_50', figsize=(20,10))
+        plt.title('Daily Close')
+        plt.show()
         #plot the return from today's pe += 5%
         df[(df['pe'] < pe_high) & (df['pe'] > pe_low) & (df['date_parsed'] < '2017-06-06')].hist(['tot_gain'], bins=40, figsize=(20,10))
+        plt.title('Total return, P-E ~{0}'.format(pe_today))
+        plt.show()
         #plot the return from today's div += 5%
         df[(df['dy'] < div_high) & (df['dy'] > div_low) & (df['date_parsed'] < '2017-06-06')].hist(['tot_gain'], bins=40, figsize=(20,10))
-
+        plt.title('Total return, yield ~{0}'.format(dy_today))
+        plt.show()
 
     else:
         pe_mean = np.mean(df['pe'])
@@ -239,6 +253,13 @@ def show_metrics_distribution(df, divs, symbol):
         gain_lower = gain_mean - gain_std
         pe_upper = pe_mean + pe_std
         pe_lower = pe_mean - pe_std
+
+        #average return from today's metrics
+        pe_high = pe_today * 1.05
+        pe_low = pe_today * 0.95
+        pe_average_today = df[(df['pe'] < pe_high) & (df['pe'] > pe_low) & (df['date_parsed'] < '2017-06-06')]['tot_gain'].mean()
+
+
 
         print('Gain')
         print('   mean:                              {0}'.format(gain_mean))
@@ -255,12 +276,16 @@ def show_metrics_distribution(df, divs, symbol):
 
         #plot the time series
         df.plot(x = 'date_parsed', y ='avg_50', figsize=(20,10))
+        plt.title('Daily Close')
+        plt.show()
         #plot the return from today's pe += 5%
         df[(df['pe'] < pe_high) & (df['pe'] > pe_low) & (df['date_parsed'] < '2017-06-06')]['tot_gain'].hist(['tot_gain'], bins=40, figsize=(20,10))
+        plt.title('Total return, P-E ~{0}'.format(pe_today))
+        plt.show()
         #plot the return from today's div += 5%
         #df[(df['dy'] < div_high) & (df['dy'] > div_low) & (df['date_parsed'] < '2017-06-06')]['tot_gain'].hist(['tot_gain'], bins=40, figsize=(20,10))
     
-    plt.show()
+    #plt.show()
 
 '''
 df[(df['pe'] < 10.45) & (df['pe'] > 10.15) & (df['date_parsed'] < '2017-06-06')].hist(['tot_gain'], bins=40, figsize=(20,10))
@@ -280,7 +305,7 @@ def predict_from_regression(df, divs, symbol):
     print('Gain')
 
     #Prune to avoid nonsensical returns
-    df_pruned = prune_data(df['2017-05-06':], divs, 3.0)
+    df_pruned = prune_data(df[:'2017-05-06'], divs, 3.0)
 
     X = pd.DataFrame(df_pruned['pe'])
     y = pd.DataFrame(df_pruned['tot_gain'])
