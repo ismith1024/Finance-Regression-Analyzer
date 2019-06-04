@@ -10,6 +10,7 @@ Takes a ticker symbol and displays:
 import pandas as pd
 import sqlite3
 import datetime
+from datetime import date
 import numpy as np
 import matplotlib
 import sys
@@ -17,6 +18,11 @@ from sklearn.linear_model import LinearRegression
 from scipy import stats
 from sklearn import preprocessing
 from sklearn.model_selection import KFold
+
+import importlib
+
+importlib.import_module('market_df')
+from market_df import *
 
 from matplotlib import pyplot as plt
 #plt.figure(figsize=(20,10))
@@ -66,7 +72,7 @@ def custom_kernel(func, kern):
     Kernel must be odd in length
     Function must be longer than kernel    
     '''
-    if len(func) < len(kern):
+    if len(func) <= len(kern):
         return func
     else:
         #midpoint of the kernel
@@ -75,8 +81,7 @@ def custom_kernel(func, kern):
     conv_func = np.zeros(len(func))
     
     for index, value in enumerate(func):
-        
-        ##TODO: this case is backwards I think
+
         if index < mid_kern:
             #go from kern[mid_kern] to end for zero
             dist_from_start = index -1
@@ -105,12 +110,13 @@ def custom_kernel(func, kern):
             sum = 0.0
             for kern_ind, kern_val in enumerate(kern):
                 sum += kern_val * func[index + kern_ind - mid_kern]
+
             conv_func[index] = sum
         
     return conv_func
 
 def return_to_date(row, today, last_close):
-    elapsed_years = (today - row['date_parsed']).days / 365.25
+    elapsed_years = (today - row['date']).days / 365.25
     if elapsed_years == 0:
         return 1.0
     gain = last_close / row['close']
@@ -158,23 +164,26 @@ def prune_data(df, divs, num_sig):
 
     return df_pruned
 
-def get_todays_metrics(df):
-    dy = df.tail(1)['dy'][0]
-    pe = df.tail(1)['pe'][0]
-    price = df.tail(1)['close'][0]
+def get_todays_metrics(df, divs):
+    if divs:
+        dy = df['dy'][df.shape[0] -1]
+    else:
+        dy = 0
+    pe = df['pe'][df.shape[0] -1]
+    price = df['close'][df.shape[0] -1]
     return dy, pe, price
 
 def show_metrics_distribution(df, divs, symbol):
     #Today's metrics
-    dy_today, pe_today, price_today = get_todays_metrics(df)
+    dy_today, pe_today, price_today = get_todays_metrics(df, divs)
 
-    if divs:
+    if divs:        
         pe_mean = np.mean(df['pe'])
         pe_std = np.std(df['pe'])
-        div_mean = np.mean(df['dy'])
+        div_mean = np.mean(df['div'])
         div_std = np.std(df['dy'])
-        gain_mean = np.mean(df[:'2017-06-06']['tot_gain']) 
-        gain_std = np.std(df[:'2017-06-06']['tot_gain'])
+        gain_mean = np.mean(df[:400]['tot_gain']) 
+        gain_std = np.std(df[:400]['tot_gain'])
 
         gain_upper = gain_mean + gain_std
         gain_lower = gain_mean - gain_std
@@ -186,12 +195,12 @@ def show_metrics_distribution(df, divs, symbol):
         #average return from today's metrics
         div_high = dy_today * 1.05
         div_low = dy_today *0.95
-        div_average_today = df[(df['dy'] < div_high) & (df['dy'] > div_low) & (df['date_parsed'] < '2017-06-06')]['tot_gain'].mean()
+        div_average_today = df[(df['dy'] < div_high) & (df['dy'] > div_low) & (df['date'] < '2017-06-06')]['tot_gain'].mean()
 
         #average return from today's metrics
         pe_high = pe_today * 1.05
         pe_low = pe_today * 0.95
-        pe_average_today = df[(df['pe'] < pe_high) & (df['pe'] > pe_low) & (df['date_parsed'] < '2017-06-06')]['tot_gain'].mean()
+        pe_average_today = df[(df['pe'] < pe_high) & (df['pe'] > pe_low) & (df['date'] < '2017-06-06')]['tot_gain'].mean()
 
         sql_text = 'UPDATE analysis SET gain_mean = ? WHERE symbol = ?'
         job = (gain_mean, symbol)
@@ -232,7 +241,7 @@ def show_metrics_distribution(df, divs, symbol):
         #average return from today's metrics
         pe_high = pe_today * 1.05
         pe_low = pe_today * 0.95
-        pe_average_today = df[(df['pe'] < pe_high) & (df['pe'] > pe_low) & (df['date_parsed'] < '2017-06-06')]['tot_gain'].mean()
+        pe_average_today = df[(df['pe'] < pe_high) & (df['pe'] > pe_low) & (df['date'] < '2017-06-06')]['tot_gain'].mean()
 
         sql_text = 'UPDATE analysis SET gain_mean = ? WHERE symbol = ?'
         job = (gain_mean, symbol)
@@ -264,12 +273,13 @@ def predict_from_regression(df, divs, symbol):
     Gain is used up to 2017-05-06
     '''
     #Today's metrics
-    dy_today, pe_today, price_today = get_todays_metrics(df)
+    dy_today, pe_today, price_today = get_todays_metrics(df, divs)
 
     #outfile.write('Gain\n')
 
     #Prune to avoid nonsensical returns
-    df_pruned = prune_data(df[:'2017-05-06'], divs, 3.0)
+    valid_data_length = df.shape[0] - 400
+    df_pruned = prune_data(df[:valid_data_length], divs, 3.0)
 
     X = pd.DataFrame(df_pruned['pe'])
     y = pd.DataFrame(df_pruned['tot_gain'])
@@ -336,116 +346,47 @@ yahoo.db
 def main():
 
     sql_symbols = 'SELECT company_ticker FROM tsx_companies'
-    advfn_curs.execute(sql_symbols)
+    advfn_curs.execute(sql_symbols)    
     symbols = advfn_curs.fetchall()
+    #symbols are now in Google notation
+
     for sym in symbols:
         symbol = sym[0]
-        print('Analyze {0}'.format(symbol))
-        #outfile.write('\n\n==={0}=======\n'.format(symbol))
-        #print('   SQL queries...')
+        print('Evaluate: ' + symbol)
+        df, divs = market_df(symbol)
 
-        #change this from yahoo to google notation
-        tmx_sql = '''SELECT date, eps FROM tmx_earnings WHERE symbol = "{0}"'''.format(symbol.replace('-','.'))
-        df_tmx = pd.read_sql_query(tmx_sql, tmx_database)
-        df_tmx.columns = ['date', 'eps']
-        df_tmx['date_parsed'] = df_tmx['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
-        df_tmx.drop(columns = 'date', inplace = True)
-
-        aav_sql = '''SELECT Date, Close FROM aav_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol)
-        df_aav = pd.read_sql_query(aav_sql, yahoo_database)
-        df_aav.columns = ['date', 'close']
-        df_aav['date_parsed'] = df_aav['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
-        df_aav.drop(columns = 'date', inplace = True)
-
-        #need to change yahoo notation to google notation
-        yahoo_prices_sql = '''SELECT Date, Close FROM tsx_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol.replace('-','.'))
-        df_y_price = pd.read_sql_query(yahoo_prices_sql, yahoo_database)
-        df_y_price.columns = ['date', 'close']
-        df_y_price['date_parsed'] = df_y_price['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
-        df_y_price.drop(columns = 'date', inplace = True)
-
-        divs_sql = '''SELECT Date, Dividends FROM divs WHERE symbol = "{0}"'''.format(symbol)
-        df_divs = pd.read_sql_query(divs_sql, yahoo_database) 
-        df_divs.columns = ['date', 'div']
-        df_divs['date_parsed'] = df_divs['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
-        df_divs.drop(columns = 'date', inplace = True)
-
-        df_price = pd.concat([df_y_price, df_aav])
-        #print('Before: ' + str(df_price.shape[0]))
-        df_price.drop_duplicates(subset='date_parsed', inplace = True)
-        #print('After: ' + str(df_price.shape[0]))
-        #df_price
-
-        split_sql = '''SELECT date, total_adjustment FROM splits WHERE symbol = "{0}"'''.format(symbol)
-        df_split = pd.read_sql_query(split_sql, yahoo_database) 
-        df_split.columns = ['date', 'split_adj']
-        df_split['date_parsed'] = df_split['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
-        df_split.drop(columns = 'date', inplace = True)
-
-        #print('   complete!')
-
-        #print('   Merge dataframes...')
-        df = df_price.join(df_tmx.set_index('date_parsed'), on = 'date_parsed', how = 'outer', sort = True)
-
-        df = df.join(df_divs.set_index('date_parsed'), on = 'date_parsed', how = 'outer', sort = True)
-
-        df.fillna(method='ffill', inplace = True)
-
-        df = df.join(df_split.set_index('date_parsed'), on = 'date_parsed', how = 'outer', sort = True)
-        df.set_index(df['date_parsed'], inplace= True)
-
-        #split adjustment for current date is 1.0 -- backfill missing values
-
-        df.iloc[-1, df.columns.get_loc('split_adj')] = 1.0
-        df['split_adj'].fillna(method='bfill', inplace = True)
-        df.tail(5)
-
-
-        #this is for current quarter only - go back and fill the TTM on df_earnings and df_divs
-        df['pe'] = 0.0
-        df['dy'] = 0.0
-
-        #print('   complete!')
-        #print('   Calculate yield and eps...')
-            
-            
-        df['close'].fillna(method = 'ffill', inplace = True)
-        df.apply((lambda x: process_row(symbol, x, df)), axis = 1)
-
-        df['pe'].fillna(method = 'ffill', inplace = True)
-        #df['close'].fillna(method = 'bfill', inplace = True)
-
-        #print('   complete!')
-        #print('   Calculate returns...')
+        #print(df)
 
         df['avg_50'] = custom_kernel(df['close'], kern_50)
         df['avg_200'] = custom_kernel(df['close'], kern_200)
 
-        today = datetime.datetime.today()
-        last_close = df.tail(1)['avg_200'][0]
+        today = datetime.today()
+        last_close = df['avg_200'][df.shape[0] -1]
+        #print(df['avg_200'][df.shape[0] -1])
 
         #print('Elapsed: ' + str((today - df.head(1)['date_parsed'][0]).days / 365.25 ) + ' years')
 
         df['cap_gain'] = df.apply(lambda x: return_to_date(x, today, last_close), axis = 1) 
-        if (df.tail(1)['dy'][0] > 0):
-            divs = True
+        if divs:
+            #divs = True
             #print('Found a dividend yield')
-            df['tot_gain'] = df['cap_gain'] + (df['dy'] * 100)
+            df['tot_gain'] = df['cap_gain'] + (df['div'] * 100)
         else:
-            divs = False
+            #divs = False
             #print('No dividend yield found')
             df['tot_gain'] = df['cap_gain']
 
         #print('  complete!')
 
         #Today's metrics
-        dy_today, pe_today, price_today = get_todays_metrics(df)
+        dy_today, pe_today, price_today = get_todays_metrics(df, divs)
 
-
-
-        predict_from_regression(df, divs, symbol)
-        show_metrics_distribution(df, divs, symbol)
-        advfn_database.commit()  
+        if df.shape[0] > 400:
+            predict_from_regression(df, divs, symbol)
+            show_metrics_distribution(df, divs, symbol)
+            advfn_database.commit()  
+        else:
+            print(symbol + ' has too few data samples (' + str(df.shape[0]) + ').')
 
     #outfile.close()
 
