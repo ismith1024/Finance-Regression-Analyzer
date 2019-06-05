@@ -370,7 +370,7 @@ def main():
         if divs:
             #divs = True
             #print('Found a dividend yield')
-            df['tot_gain'] = df['cap_gain'] + (df['div'] * 100)
+            df['tot_gain'] = df['cap_gain'] + (df['dy'] * 100)
         else:
             #divs = False
             #print('No dividend yield found')
