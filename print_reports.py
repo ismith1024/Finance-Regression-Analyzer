@@ -119,7 +119,7 @@ def return_to_date(row, today, last_close):
     elapsed_years = (today - row['date']).days / 365.25
     if elapsed_years == 0:
         return 1.0
-    gain = last_close / row['close']
+    gain = last_close if row['close'] == 0 else last_close / row['close']
     ann_gain = gain ** (1/elapsed_years)
     return 100 * (ann_gain - 1.0)
 
