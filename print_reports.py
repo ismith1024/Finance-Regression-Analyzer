@@ -119,7 +119,7 @@ def return_to_date(row, today, last_close):
     elapsed_years = (today - row['date']).days / 365.25
     if elapsed_years == 0:
         return 1.0
-    gain = last_close if row['close'] == 0 else last_close / row['close']
+    gain = np.nan if row['close'] == 0 else last_close / row['close']
     ann_gain = gain ** (1/elapsed_years)
     return 100 * (ann_gain - 1.0)
 
@@ -132,12 +132,12 @@ def prune_data(df, divs, num_sig):
     '''
 
     if divs:
-        pe_mean = np.mean(df['pe'])
-        pe_std = np.std(df['pe'])
-        div_mean = np.mean(df['dy'])
-        div_std = np.std(df['dy'])
-        gain_mean = np.mean(df['tot_gain'])
-        gain_std = np.std(df['tot_gain'])
+        pe_mean = np.mean(df['pe']) #.notna())
+        pe_std = np.std(df['pe']) #.notna())
+        div_mean = np.mean(df['dy']) #.notna())
+        div_std = np.std(df['dy'])# .notna())
+        gain_mean = np.mean(df['tot_gain'])#.notna())
+        gain_std = np.std(df['tot_gain'])#.notna())
         pe_upper = pe_mean + num_sig * pe_std
         pe_lower = pe_mean - num_sig * pe_std
         div_upper = div_mean + num_sig * div_std
@@ -148,19 +148,21 @@ def prune_data(df, divs, num_sig):
         df_pruned = df[(df['pe'] < pe_upper) & (df['pe'] > pe_lower) & (df['dy'] < div_upper) & (df['dy'] > div_lower) & (df['pe'] > 0) & (df['tot_gain'] < gain_upper) & (df['tot_gain'] > gain_lower)].copy()
  
     else:
-        pe_mean = np.mean(df['pe'])
-        pe_std = np.std(df['pe'])
+        pe_mean = np.mean(df['pe'])#.notna())
+        pe_std = np.std(df['pe'])#.notna())
 
         pe_upper = pe_mean + num_sig * pe_std
         pe_lower = pe_mean - num_sig * pe_std
         
-        gain_mean = np.mean(df['tot_gain'])
-        gain_std = np.std(df['tot_gain'])
+        gain_mean = np.mean(df['tot_gain'])#.notna())
+        gain_std = np.std(df['tot_gain'])#.notna())
         
         gain_upper = gain_mean + num_sig * gain_std
         gain_lower = gain_mean - num_sig * gain_std
 
         df_pruned = df[(df['pe'] < pe_upper) & (df['pe'] > pe_lower) & (df['pe'] > 0) & (df['tot_gain'] < gain_upper) & (df['tot_gain'] > gain_lower)].copy()
+
+    #print("Pe found - mean: {0}  std:{1}".format(pe_mean, pe_std))
 
     return df_pruned
 
@@ -177,13 +179,19 @@ def show_metrics_distribution(df, divs, symbol):
     #Today's metrics
     dy_today, pe_today, price_today = get_todays_metrics(df, divs)
 
+    valid_data_length = df.shape[0] - 400
+
     if divs:        
-        pe_mean = np.mean(df['pe'])
-        pe_std = np.std(df['pe'])
-        div_mean = np.mean(df['div'])
-        div_std = np.std(df['dy'])
-        gain_mean = np.mean(df[:400]['tot_gain']) 
-        gain_std = np.std(df[:400]['tot_gain'])
+        pe_mean = df['pe'].mean()
+        pe_std = df['pe'].std()
+        div_mean = df['dy'].mean()
+        div_std = df['dy'].std()
+        gain_mean = df[:valid_data_length]['tot_gain'].mean()
+        gain_std = df[:valid_data_length]['tot_gain'].std()
+
+        '''if gain_mean != gain_mean:
+            gain_mean = 0.0
+            gain_std = 1.0'''
 
         gain_upper = gain_mean + gain_std
         gain_lower = gain_mean - gain_std
@@ -228,10 +236,14 @@ def show_metrics_distribution(df, divs, symbol):
         
 
     else:
-        pe_mean = np.mean(df['pe'])
-        pe_std = np.std(df['pe'])
-        gain_mean = np.mean(df['tot_gain'])
-        gain_std = np.std(df['tot_gain'])
+        pe_mean = df['pe'].mean()#.notna())
+        pe_std = df['pe'].std()#.notna())
+        gain_mean = df[:valid_data_length]['tot_gain'].mean()#.notna())
+        gain_std = df[:valid_data_length]['tot_gain'].std()#.notna())
+
+        '''if gain_mean != gain_mean:
+            gain_mean = 0.0
+            gain_std = 1.0'''
 
         gain_upper = gain_mean + gain_std
         gain_lower = gain_mean - gain_std

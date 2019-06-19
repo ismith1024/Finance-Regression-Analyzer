@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import sqlite3
 from sqlite3 import Error
 from datetime import datetime
@@ -115,6 +116,10 @@ def market_df(symbol):
         df['div'].fillna(method = 'ffill', inplace = True)
 
         df['dy'] = df['div'] / df['close']
+
+    df['close'].replace(0, np.NaN, inplace=True)
+    #df['close'].interpolate(inplace = True)
+    #df.dropna(inplace = True)
 
     df['pe'] = df['close'] / df['eps']
 
