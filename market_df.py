@@ -5,18 +5,22 @@ from sqlite3 import Error
 from datetime import datetime
 #%matplotlib inline
 
-tmx_file = '/home/ian/Data/tmx.db'
-yahoo_file = '/home/ian/Data/yahoo.db'
-advfn_file = '/home/ian/Data/advfn.db'
+#tmx_file = '/home/ian/Data/tmx.db'
+#yahoo_file = '/home/ian/Data/yahoo.db'
+#advfn_file = '/home/ian/Data/advfn.db'
 
-tmx_conn = sqlite3.connect(tmx_file)
-yahoo_conn = sqlite3.connect(yahoo_file)
-advfn_conn = sqlite3.connect(advfn_file)
+db_file = '/home/ian/Data/tsx_analysis.db'
+
+#tmx_conn = sqlite3.connect(tmx_file)
+#yahoo_conn = sqlite3.connect(yahoo_file)
+#advfn_conn = sqlite3.connect(advfn_file)
+
+conn = sqlite3.connect(db_file)
 
 def market_df(symbol):
 
 
-    reits = ['CHP.UN', 'AP.UN' , 'AX.UN', 'BEI.UN', 'CAR.UN', 'CRR.UN', 'CUF.UN', 'D.UN', 'DRG.UN', 'EXE', 'GRT.UN', 'HR.UN', 'IIP.UN', 'KMP.UN', 'NVU.UN', 'REI.UN', 'SRU.UN']
+    reits = ['CHP.UN', 'AP.UN' , 'AFN', 'AX.UN', 'BEI.UN', 'CAR.UN', 'CRR.UN', 'CUF.UN', 'D.UN', 'DRG.UN', 'EXE', 'GRT.UN', 'HR.UN', 'IIP.UN', 'KMP.UN', 'NVU.UN', 'REI.UN', 'SRU.UN']
 
     #tmx.db
         #tmx_earnings - uses '.', not split-adjusted
@@ -40,28 +44,28 @@ def market_df(symbol):
     symbol_google = symbol.replace('-','.') #'BNS'
 
     tmx_sql = 'SELECT date, eps FROM tmx_earnings WHERE symbol = "{0}"'
-    df_tmx = pd.read_sql(tmx_sql.format(symbol_google), tmx_conn, parse_dates = {'date' : '%Y-%m-%d'})
+    df_tmx = pd.read_sql(tmx_sql.format(symbol_google), conn, parse_dates = {'date' : '%Y-%m-%d'})
     df_tmx.columns = ['date', 'eps_raw']
 
     tsx_prices_sql = 'SELECT Date, Close FROM tsx_prices WHERE symbol = "{0}"'
-    df_tsx_prices = pd.read_sql(tsx_prices_sql.format(symbol_google), yahoo_conn, parse_dates = {'Date' : '%Y-%m-%d'})
+    df_tsx_prices = pd.read_sql(tsx_prices_sql.format(symbol_google), conn, parse_dates = {'Date' : '%Y-%m-%d'})
     df_tsx_prices.columns = ['date' , 'close']
 
     splits_sql = 'SELECT date, total_adjustment FROM splits WHERE symbol = "{0}"'
-    df_splits = pd.read_sql(splits_sql.format(symbol_yahoo), yahoo_conn, parse_dates = {'date' : '%Y-%m-%d'})
+    df_splits = pd.read_sql(splits_sql.format(symbol_yahoo), conn, parse_dates = {'date' : '%Y-%m-%d'})
 
     divs_sql = 'SELECT Date, Dividends FROM divs WHERE symbol = "{0}"'
-    df_divs = pd.read_sql(divs_sql.format(symbol_yahoo), yahoo_conn, parse_dates = {'Date' : '%Y-%m-%d'})
+    df_divs = pd.read_sql(divs_sql.format(symbol_yahoo), conn, parse_dates = {'Date' : '%Y-%m-%d'})
     df_divs.columns = ['date', 'div_raw']
     
     divs = (df_divs.shape[0] != 0)        
 
     yahoo_indicators_sql = 'SELECT Date, eps, div_payout FROM yahoo_indicators WHERE symbol = "{0}"'
-    df_yahoo = pd.read_sql(yahoo_indicators_sql.format(symbol_yahoo), yahoo_conn, parse_dates ={'Date' : '%Y-%m-%d'})
+    df_yahoo = pd.read_sql(yahoo_indicators_sql.format(symbol_yahoo), conn, parse_dates ={'Date' : '%Y-%m-%d'})
     df_yahoo.columns = ['date', 'eps', 'div']
 
     aav_sql = 'SELECT Date, Close FROM aav_prices WHERE symbol = "{0}"'
-    df_aav = pd.read_sql(aav_sql.format(symbol_yahoo), yahoo_conn, parse_dates ={'Date' : '%Y-%m-%d'})
+    df_aav = pd.read_sql(aav_sql.format(symbol_yahoo), conn, parse_dates ={'Date' : '%Y-%m-%d'})
     df_aav.columns = ['date', 'close'] 
 
     df_price = pd.concat([df_tsx_prices[df_tsx_prices['close'].notnull()][['date', 'close']], df_aav[df_aav['close'].notnull()][['date','close']]])

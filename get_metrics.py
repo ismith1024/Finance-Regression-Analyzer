@@ -15,14 +15,18 @@ from matplotlib import pyplot as plt
 kern_200 = [0.000001,0.000001,0.000001,0.000001,0.000001,0.000002,0.000002,0.000002,0.000003,0.000003,0.000004,0.000005,0.000006,0.000007,0.000009,0.00001,0.000012,0.000015,0.000017,0.000021,0.000024,0.000029,0.000034,0.00004,0.000047,0.000054,0.000063,0.000074,0.000086,0.000099,0.000115,0.000133,0.000153,0.000176,0.000202,0.000231,0.000264,0.000301,0.000342,0.000388,0.00044,0.000498,0.000562,0.000632,0.000711,0.000797,0.000892,0.000996,0.00111,0.001235,0.001371,0.001519,0.001679,0.001852,0.002038,0.002239,0.002455,0.002686,0.002932,0.003194,0.003473,0.003769,0.00408,0.004409,0.004754,0.005116,0.005494,0.005888,0.006297,0.00672,0.007157,0.007607,0.008068,0.00854,0.00902,0.009508,0.010002,0.010499,0.010999,0.011498,0.011996,0.012489,0.012975,0.013453,0.013919,0.014372,0.014809,0.015228,0.015626,0.016002,0.016353,0.016677,0.016972,0.017237,0.01747,0.01767,0.017835,0.017964,0.018058,0.018114,0.018132,0.018114,0.018058,0.017964,0.017835,0.01767,0.01747,0.017237,0.016972,0.016677,0.016353,0.016002,0.015626,0.015228,0.014809,0.014372,0.013919,0.013453,0.012975,0.012489,0.011996,0.011498,0.010999,0.010499,0.010002,0.009508,0.00902,0.00854,0.008068,0.007607,0.007157,0.00672,0.006297,0.005888,0.005494,0.005116,0.004754,0.004409,0.00408,0.003769,0.003473,0.003194,0.002932,0.002686,0.002455,0.002239,0.002038,0.001852,0.001679,0.001519,0.001371,0.001235,0.00111,0.000996,0.000892,0.000797,0.000711,0.000632,0.000562,0.000498,0.00044,0.000388,0.000342,0.000301,0.000264,0.000231,0.000202,0.000176,0.000153,0.000133,0.000115,0.000099,0.000086,0.000074,0.000063,0.000054,0.000047,0.00004,0.000034,0.000029,0.000024,0.000021,0.000017,0.000015,0.000012,0.00001,0.000009,0.000007,0.000006,0.000005,0.000004,0.000003,0.000003,0.000002,0.000002,0.000002,0.000001,0.000001,0.000001,0.000001,0.000001]
 kern_50 =  [0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.000251,0.000484,0.000898,0.001601,0.002743,0.004514,0.00714,0.010852,0.015849,0.022242,0.029993,0.038866,0.048394,0.057904,0.066574,0.073551,0.078084,0.079656,0.078084,0.073551,0.066574,0.057904,0.048394,0.038866,0.029993,0.022242,0.015849,0.010852,0.00714,0.004514,0.002743,0.001601,0.000898,0.000484,0.000251,0.000125,0.00006,0.000027,0.000012,0.000005,0.000002,0.000001,0]
 
-yahoo_db = '/home/ian/Data/yahoo.db'
-tmx_db = '/home/ian/Data/tmx.db'
-advfn_db = '/home/ian/Data/advfn.db'
+#yahoo_db = '/home/ian/Data/yahoo.db'
+#tmx_db = '/home/ian/Data/tmx.db'
+#advfn_db = '/home/ian/Data/advfn.db'
 
-yahoo_database = sqlite3.connect(yahoo_db)
-tmx_database = sqlite3.connect(tmx_db)
-advfn_database = sqlite3.connect(advfn_db)
-advfn_curs = advfn_database.cursor()
+#yahoo_database = sqlite3.connect(yahoo_db)
+#tmx_database = sqlite3.connect(tmx_db)
+#advfn_database = sqlite3.connect(advfn_db)
+#advfn_curs = advfn_database.cursor()
+
+db = '/home/ian/Data/tsx_analysis.db'
+database = sqlite3.connect(db)
+curs = database.cursor()
 
 def process_row(row, df):
     if (row['close'] != row['close']) | (row['close'] == 'null'):
@@ -205,8 +209,8 @@ def show_regression(df, divs, symbol):
 
     sql_text = 'INSERT OR IGNORE INTO regression_metrics(symbol, method, fold_1, fold_2, fold_3) VALUES(?, ?, ?, ?, ?)'
     job = (symbol, 'p-e', scores[0], scores[1], scores[2])
-    advfn_curs.execute(sql_text, job)
-    advfn_database.commit()
+    curs.execute(sql_text, job)
+    database.commit()
 
     if divs:
         X = pd.DataFrame(df_pruned['dy'])
@@ -227,8 +231,8 @@ def show_regression(df, divs, symbol):
 
         sql_text = 'INSERT OR IGNORE INTO regression_metrics(symbol, method, fold_1, fold_2, fold_3) VALUES(?, ?, ?, ?, ?)'
         job = (symbol, 'divs', scores2[0], scores2[1], scores2[2])
-        advfn_curs.execute(sql_text, job)
-        advfn_database.commit()
+        curs.execute(sql_text, job)
+        database.commit()
 
         y_pred2 = model2.predict(X)
         #plt.scatter(X, y,  color='black')
@@ -316,8 +320,8 @@ def show_regression2(df, divs, symbol):
 
         sql_text = 'INSERT OR IGNORE INTO regression_metrics(symbol, method, fold_1, fold_2, fold_3) VALUES(?, ?, ?, ?, ?)'
         job = (symbol, 'multiple', scores2[0], scores2[1], scores2[2])
-        advfn_curs.execute(sql_text, job)
-        advfn_database.commit()
+        curs.execute(sql_text, job)
+        database.commit()
 
     #df_pruned.hist(['tot_gain'], bins=50, figsize=(20,10))
     #plt.xticks(())
@@ -346,26 +350,26 @@ def main():
 
         #change this from yahoo to google notation
         tmx_sql = '''SELECT date, eps FROM tmx_earnings WHERE symbol = "{0}"'''.format(symbol.replace('-','.'))
-        df_tmx = pd.read_sql_query(tmx_sql, tmx_database)
+        df_tmx = pd.read_sql_query(tmx_sql, database)
         df_tmx.columns = ['date', 'eps']
         df_tmx['date_parsed'] = df_tmx['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
         df_tmx.drop(columns = 'date', inplace = True)
 
         aav_sql = '''SELECT Date, Close FROM aav_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol)
-        df_aav = pd.read_sql_query(aav_sql, yahoo_database)
+        df_aav = pd.read_sql_query(aav_sql, database)
         df_aav.columns = ['date', 'close']
         df_aav['date_parsed'] = df_aav['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
         df_aav.drop(columns = 'date', inplace = True)
 
         #need to change yahoo notation to google notation
         yahoo_prices_sql = '''SELECT Date, Close FROM tsx_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol.replace('-','.'))
-        df_y_price = pd.read_sql_query(yahoo_prices_sql, yahoo_database)
+        df_y_price = pd.read_sql_query(yahoo_prices_sql, database)
         df_y_price.columns = ['date', 'close']
         df_y_price['date_parsed'] = df_y_price['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
         df_y_price.drop(columns = 'date', inplace = True)
 
         divs_sql = '''SELECT Date, Dividends FROM divs WHERE symbol = "{0}"'''.format(symbol)
-        df_divs = pd.read_sql_query(divs_sql, yahoo_database) 
+        df_divs = pd.read_sql_query(divs_sql, database) 
         df_divs.columns = ['date', 'div']
         df_divs['date_parsed'] = df_divs['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
         df_divs.drop(columns = 'date', inplace = True)
@@ -377,7 +381,7 @@ def main():
         df_price
 
         split_sql = '''SELECT date, total_adjustment FROM splits WHERE symbol = "{0}"'''.format(symbol)
-        df_split = pd.read_sql_query(split_sql, yahoo_database) 
+        df_split = pd.read_sql_query(split_sql, database) 
         df_split.columns = ['date', 'split_adj']
         df_split['date_parsed'] = df_split['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
         df_split.drop(columns = 'date', inplace = True)
@@ -442,8 +446,8 @@ def main():
 
     else:
         sql_symbols = 'SELECT company_ticker FROM tsx_companies'
-        advfn_curs.execute(sql_symbols)
-        res = advfn_curs.fetchall()
+        curs.execute(sql_symbols)
+        res = curs.fetchall()
         symbols = []
         for sym in res:
             symbols.append(sym[0])
@@ -453,26 +457,26 @@ def main():
 
             #change this from yahoo to google notation
             tmx_sql = '''SELECT date, eps FROM tmx_earnings WHERE symbol = "{0}"'''.format(symbol.replace('-','.'))
-            df_tmx = pd.read_sql_query(tmx_sql, tmx_database)
+            df_tmx = pd.read_sql_query(tmx_sql, database)
             df_tmx.columns = ['date', 'eps']
             df_tmx['date_parsed'] = df_tmx['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
             df_tmx.drop(columns = 'date', inplace = True)
 
             aav_sql = '''SELECT Date, Close FROM aav_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol)
-            df_aav = pd.read_sql_query(aav_sql, yahoo_database)
+            df_aav = pd.read_sql_query(aav_sql, database)
             df_aav.columns = ['date', 'close']
             df_aav['date_parsed'] = df_aav['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
             df_aav.drop(columns = 'date', inplace = True)
 
             #need to change yahoo notation to google notation
             yahoo_prices_sql = '''SELECT Date, Close FROM tsx_prices WHERE symbol = "{0}" AND close != "null"'''.format(symbol.replace('-','.'))
-            df_y_price = pd.read_sql_query(yahoo_prices_sql, yahoo_database)
+            df_y_price = pd.read_sql_query(yahoo_prices_sql, database)
             df_y_price.columns = ['date', 'close']
             df_y_price['date_parsed'] = df_y_price['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
             df_y_price.drop(columns = 'date', inplace = True)
 
             divs_sql = '''SELECT Date, Dividends FROM divs WHERE symbol = "{0}"'''.format(symbol)
-            df_divs = pd.read_sql_query(divs_sql, yahoo_database) 
+            df_divs = pd.read_sql_query(divs_sql, database) 
             df_divs.columns = ['date', 'div']
             df_divs['date_parsed'] = df_divs['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
             df_divs.drop(columns = 'date', inplace = True)
@@ -484,7 +488,7 @@ def main():
             df_price
 
             split_sql = '''SELECT date, total_adjustment FROM splits WHERE symbol = "{0}"'''.format(symbol)
-            df_split = pd.read_sql_query(split_sql, yahoo_database) 
+            df_split = pd.read_sql_query(split_sql, database) 
             df_split.columns = ['date', 'split_adj']
             df_split['date_parsed'] = df_split['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d'))
             df_split.drop(columns = 'date', inplace = True)

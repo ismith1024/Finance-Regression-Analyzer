@@ -32,16 +32,21 @@ kern_50 =  [0,0.000001,0.000002,0.000005,0.000012,0.000027,0.00006,0.000125,0.00
 
 reits = ['CHP.UN', 'AP.UN' , 'AX.UN', 'BEI.UN', 'CAR.UN', 'CRR.UN', 'CUF.UN', 'D.UN', 'DRG.UN', 'EXE', 'GRT.UN', 'HR.UN', 'IIP.UN', 'KMP.UN', 'NVU.UN', 'REI.UN', 'SRU.UN']
 
-yahoo_db = '/home/ian/Data/yahoo.db'
-tmx_db = '/home/ian/Data/tmx.db'
-advfn_db = '/home/ian/Data/advfn.db'
+#yahoo_db = '/home/ian/Data/yahoo.db'
+#tmx_db = '/home/ian/Data/tmx.db'
+#advfn_db = '/home/ian/Data/advfn.db'
+
+db = '/home/ian/Data/tsx_analysis.db'
 
 #outfile = open("prediction_report.txt","w") 
 
-yahoo_database = sqlite3.connect(yahoo_db)
-tmx_database = sqlite3.connect(tmx_db)
-advfn_database = sqlite3.connect(advfn_db)
-advfn_curs = advfn_database.cursor()
+#yahoo_database = sqlite3.connect(yahoo_db)
+#tmx_database = sqlite3.connect(tmx_db)
+#advfn_database = sqlite3.connect(advfn_db)
+#advfn_curs = advfn_database.cursor()
+
+database = sqlite3.connect(db)
+curs = database.cursor()
 
 #sql_text = 'UPDATE analysis SET bar = ? WHERE symbol = ?'
 #job = (bar, symbol)
@@ -212,27 +217,33 @@ def show_metrics_distribution(df, divs, symbol):
 
         sql_text = 'UPDATE analysis SET gain_mean = ? WHERE symbol = ?'
         job = (gain_mean, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
         
         sql_text = 'UPDATE analysis SET gain_std = ? WHERE symbol = ?'
         job = (gain_std, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
 
         sql_text = 'UPDATE analysis SET pe_mean = ? WHERE symbol = ?'
         job = (pe_mean, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
 
         sql_text = 'UPDATE analysis SET pe_std = ? WHERE symbol = ?'
         job = (pe_std, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
 
         sql_text = 'UPDATE analysis SET dy_mean = ? WHERE symbol = ?'
         job = (div_mean, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
 
         sql_text = 'UPDATE analysis SET dy_std = ? WHERE symbol = ?'
         job = (div_std, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
         
 
     else:
@@ -257,19 +268,23 @@ def show_metrics_distribution(df, divs, symbol):
 
         sql_text = 'UPDATE analysis SET gain_mean = ? WHERE symbol = ?'
         job = (gain_mean, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
         
         sql_text = 'UPDATE analysis SET gain_std = ? WHERE symbol = ?'
         job = (gain_std, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
 
         sql_text = 'UPDATE analysis SET pe_mean = ? WHERE symbol = ?'
         job = (pe_mean, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
 
         sql_text = 'UPDATE analysis SET pe_std = ? WHERE symbol = ?'
         job = (pe_std, symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
 
 
 '''
@@ -308,7 +323,8 @@ def predict_from_regression(df, divs, symbol):
     pred_val = model.predict(pe_today)
     sql_text = 'UPDATE analysis SET pe_prediction = ? WHERE symbol = ?'
     job = (pred_val[0][0], symbol)
-    advfn_curs.execute(sql_text, job)
+    #advfn_curs.execute(sql_text, job)
+    curs.execute(sql_text, job)
 
 
     #if we have dividends, predict the dy and combined
@@ -325,7 +341,8 @@ def predict_from_regression(df, divs, symbol):
         pred_val = model2.predict(dy_today)
         sql_text = 'UPDATE analysis SET dy_prediction = ? WHERE symbol = ?'
         job = (pred_val[0][0], symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
 
         X = pd.DataFrame(df_pruned[['pe', 'dy']])
         y = pd.DataFrame(df_pruned['tot_gain'])
@@ -339,7 +356,8 @@ def predict_from_regression(df, divs, symbol):
         pred_val = model3.predict(np.array([pe_today,dy_today]).reshape(1, -1))
         sql_text = 'UPDATE analysis SET multiple_prediction = ? WHERE symbol = ?'
         job = (pred_val[0][0], symbol)
-        advfn_curs.execute(sql_text, job)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
 
 
 
@@ -358,12 +376,25 @@ yahoo.db
 def main():
 
     sql_symbols = 'SELECT company_ticker FROM tsx_companies'
-    advfn_curs.execute(sql_symbols)    
-    symbols = advfn_curs.fetchall()
+    #advfn_curs.execute(sql_symbols)    
+    curs.execute(sql_symbols)
+    #symbols = advfn_curs.fetchall()
+    symbols = curs.fetchall()
     #symbols are now in Google notation
+    #symbols = ['AFN', 'ATZ', 'CJT', 'SSL', 'TRST']
 
     for sym in symbols:
         symbol = sym[0]
+
+        sql_text = 'INSERT OR IGNORE INTO analysis(symbol) VALUES(?)'
+        job = (symbol,)
+        #advfn_curs.execute(sql_text, job)
+        curs.execute(sql_text, job)
+
+        #sql_text = 'INSERT OR IGNORE INTO regression_metrics(symbol) VALUES(?)'
+        #job = (symbol,)
+        #advfn_curs.execute(sql_text, job)
+
         print('Evaluate: ' + symbol)
         df, divs = market_df(symbol)
 
@@ -396,13 +427,15 @@ def main():
         if df.shape[0] > 400:
             predict_from_regression(df, divs, symbol)
             show_metrics_distribution(df, divs, symbol)
-            advfn_database.commit()  
+            #advfn_database.commit() 
+            database.commit()  
         else:
             print(symbol + ' has too few data samples (' + str(df.shape[0]) + ').')
 
     #outfile.close()
 
-    advfn_database.close()
+    #advfn_database.close()
+    database.close()
 
 if __name__ == '__main__':
     main()
